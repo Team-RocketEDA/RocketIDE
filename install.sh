@@ -35,6 +35,12 @@ if [[ "$CHECK" == 1 ]]; then
   for tool in git node npm uv ngspice iverilog verilator yosys klayout magic netgen xschem; do
     printf '%-10s %s\n' "$tool" "$(command -v "$tool" || echo missing)"
   done
+  # The bundle's .env sets the model; anything already exported wins.
+  if [[ -f .env ]]; then
+    EXPORTED="$(export -p)"
+    set -a; source .env; set +a
+    eval "$EXPORTED"
+  fi
   exec python3 -I rocket_fuel/scripts/doctor.py --no-model
 fi
 
