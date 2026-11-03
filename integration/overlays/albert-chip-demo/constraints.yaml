@@ -1,0 +1,21 @@
+schema: rocketeda/constraints/v0.1
+# Added by RocketIDE: the IDE lists projects by this file, and "Run checks" runs its simulation block.
+title: MobileLLM-125M decoder chip
+description: A digital transformer decoder in RTL, with a first block placed and routed on sky130A.
+pdk: sky130A
+domains: [digital]
+agent:
+  iteration_limit: 3
+  mode: approval
+simulation:
+  operation: run_hdl_test
+  sources: [src/components/mac_unit.v, src/tb/tb_mac_unit.v]
+  # The bench reads its vectors by relative path.
+  workdir: src/tb
+checks:
+  - id: mac_unit.selftest
+    title: mac_unit self-checking testbench
+    metric: tb_pass
+    comparison: ">="
+    value: 1
+    required: true
