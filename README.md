@@ -87,6 +87,12 @@ To move a part to the latest commit of its branch:
 git submodule update --remote rocket-engine && git add rocket-engine && scripts/smoke.py
 ```
 
+## Builds and releases
+
+`.github/workflows/build.yml` builds the Docker image and desktop app on a clean machine and runs the photonic and demo
+checks. It needs a `SUBMODULES_TOKEN` secret with read access to the submodule repos. Pushing a `v*` tag publishes a
+release with the archive from `./install.sh --package`, once those jobs pass.
+
 ## What runs where
 
 | Check | Needs |
