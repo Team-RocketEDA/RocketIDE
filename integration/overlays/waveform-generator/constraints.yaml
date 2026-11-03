@@ -1,0 +1,32 @@
+schema: rocketeda/constraints/v0.1
+# Added by RocketIDE: the IDE lists projects by this file, and "Run checks" runs its simulation block.
+# Ideal models, so it needs ngspice and no PDK. The DAC's PDK checks need sky130A: see the project's README.
+title: 8-bit waveform generator
+description: Sine, saw and triangle from a phase accumulator, through an R-2R DAC and an RC filter, on sky130A.
+pdk: none
+domains: [digital, analog]
+agent:
+  iteration_limit: 3
+  mode: approval
+simulation:
+  operation: run_spice
+  sources: [design/analog/rc_filter.spice, tests/tb_rc_filter.cir]
+  analyses: ["ac dec 50 1e3 1e9"]
+checks:
+  - id: filter.passband
+    title: RC filter passband loss
+    metric: filter_dc_gain_db
+    comparison: ">="
+    value: -0.1
+    unit: dB
+    required: true
+    expr: vdb(out)[0]
+  - id: filter.corner_low
+    title: RC filter corner, lower bound
+    metric: filter_corner_mhz
+    comparison: ">="
+    value: 3.0
+    unit: MHz
+    required: true
+    expr: corner_hz/1e6
+    control: ["meas ac corner_hz when vdb(out)=-3.0103"]

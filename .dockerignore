@@ -1,0 +1,13 @@
+.git
+.env
+projects
+build
+**/.git
+**/node_modules
+**/.venv
+**/dist
+**/dist-server
+**/dist-electron
+**/.opencode-home
+**/.stores
+**/results/engine-runs

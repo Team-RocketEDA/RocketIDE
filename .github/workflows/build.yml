@@ -1,0 +1,154 @@
+# Builds and tests the whole bundle on a clean machine. A v* tag also publishes a release.
+#
+# The submodules are other repos, which the default token can't read, so this needs a SUBMODULES_TOKEN secret:
+# a token with read access to the contents of rocket-engine, rocket_fuel, UIUX and the three demo repos.
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docker:
+    name: Docker image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN }}
+      - name: Build the image
+        run: docker build -t rocketide .
+      - name: End-to-end test inside the container
+        run: docker run --rm rocketide python3 scripts/smoke.py
+      - name: Serve the app from the container
+        run: |
+          docker run -d --name rocketide -p 127.0.0.1:5173:5173 rocketide
+          for _ in $(seq 1 60); do
+            curl -fsS http://localhost:5173/api/status && break
+            sleep 2
+          done
+          curl -fsS http://localhost:5173/ | grep 'id="root"'
+          curl -fsS http://localhost:5173/api/projects | grep waveform-generator
+      - name: Container logs
+        if: failure()
+        run: docker logs rocketide || true
+
+  desktop:
+    name: Desktop app
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v5
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ngspice xvfb imagemagick \
+            libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libgtk-3-0t64 libgbm1 libasound2t64
+      - run: ./install.sh
+      - name: Open the window and capture it
+        env:
+          DISPLAY: ":99"
+          # Hosted runners restrict the unprivileged user namespaces Electron's sandbox needs.
+          ELECTRON_DISABLE_SANDBOX: "1"
+        run: |
+          Xvfb :99 -screen 0 1500x920x24 &
+          sleep 2
+          ./run.sh desktop > desktop.log 2>&1 &
+          sleep 30
+          import -window root desktop.png
+          pgrep -f 'electron' > /dev/null || { cat desktop.log; exit 1; }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desktop-app
+          path: |
+            desktop.png
+            desktop.log
+
+  photonic:
+    name: Photonic demo and optical path
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN }}
+      - uses: astral-sh/setup-uv@v5
+      - name: Install the engine with its photonic groups
+        working-directory: rocket-engine
+        run: uv sync --locked --group photonic --group layout
+      - name: Engine keeps optical spectra
+        working-directory: rocket-engine
+        run: uv run --no-sync pytest tests/adapters/test_mcp_agent_path.py -k optical -q -rs
+      - name: Photonic tests, which must run and not skip
+        working-directory: Demos/photonic_matmul
+        env:
+          ROCKET_ENGINE_HOME: ${{ github.workspace }}/rocket-engine
+        run: |
+          "$ROCKET_ENGINE_HOME/.venv/bin/python" -m pytest tests -q -rs | tee photonic.log
+          grep -E '^11 passed' photonic.log
+
+  demos:
+    name: Waveform and MobileLLM checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN }}
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ngspice iverilog
+      - name: Waveform RTL and ideal analog
+        working-directory: Demos/waveform-generator
+        run: make rtl tran dnl
+      - name: MobileLLM contract tests and elaboration
+        working-directory: Demos/albert-chip-demo
+        run: |
+          python3 -m unittest discover -s architecture/tests
+          bash src/scripts/elab.sh
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [docker, desktop, photonic, demos]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v5
+      - name: Build and upload the archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./install.sh --no-desktop --release "$GITHUB_REF_NAME"

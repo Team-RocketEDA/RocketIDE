@@ -1,0 +1,5 @@
+
+# Added by RocketIDE: what "Run checks" runs. Its targets are in the spec itself.
+simulation:
+  operation: run_optical
+  sources: [tests/tb_mesh4_identity.yml]
