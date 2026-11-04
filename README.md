@@ -32,7 +32,7 @@ what the agent says.
 > agent runtime), ngspice, Icarus Verilog, Magic, KLayout, LibreLane and the sky130A PDK.
 
 <p align="center">
-  <img src="docs/images/overview.png" alt="RocketIDE on the MobileLLM decoder project: all checks pass, recent engine runs, and the assistant ready beside the workbench" width="100%">
+  <img src="docs/images/overview.png" alt="RocketIDE on the MobileLLM decoder project: its architecture diagrams and routed layout above the checks and recent activity, with the assistant beside the workbench" width="100%">
 </p>
 
 ## Who it's for
