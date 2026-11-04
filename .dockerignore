@@ -11,3 +11,4 @@ build
 **/.opencode-home
 **/.stores
 **/results/engine-runs
+**/.tools

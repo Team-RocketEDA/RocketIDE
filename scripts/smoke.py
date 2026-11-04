@@ -147,9 +147,11 @@ def main():
     args = parser.parse_args()
 
     projects = Path(tempfile.mkdtemp(prefix="rocketide-smoke-"))
-    http_port = args.port + 1
-    env = {**os.environ, "ROCKET_PROJECTS_DIR": str(projects), "ROCKET_UI_PORT": str(args.port)}
-    server = subprocess.Popen([ROOT / "run.sh", "--engine-http", str(http_port)], env=env, start_new_session=True)
+    engine_port = args.port + 1
+    env = {**os.environ, "ROCKET_PROJECTS_DIR": str(projects), "ROCKET_UI_PORT": str(args.port),
+           "ROCKET_ENGINE_PORT": str(engine_port)}
+    server = subprocess.Popen([ROOT / "run.sh"], env=env, start_new_session=True)
+    engine = f"http://127.0.0.1:{engine_port}"
     api = Api(args.port)
     try:
         for _ in range(120):
@@ -182,6 +184,10 @@ def main():
             check_plot_data(api, "smoke-opamp", "ac", "AC Analysis")
         if args.agent:
             check_agent_prompt(api)
+            config = json.loads((projects / "smoke-opamp" / ".opencode" / "opencode.json").read_text())
+            mcp = config["mcp"]["engine"]
+            check("agent: attached to the shared engine", mcp.get("type") == "remote"
+                  and mcp.get("url") == f"{engine}/projects/smoke-opamp/mcp", json.dumps(mcp)[:120])
 
         if run_checks(api, "waveform-generator", expect_filter):
             check_plot_data(api, "waveform-generator", "ac", "AC Analysis")
@@ -190,18 +196,27 @@ def main():
             check_plot_data(api, "photonic_matmul", "optical", "wavelength_nm")
         api.json("POST", "/api/project/close")
 
-        envelope = {"project_id": "headless", "operation": "list_job_kinds", "arguments": {}}
-        request = urllib.request.Request(f"http://127.0.0.1:{http_port}/", json.dumps(envelope).encode(),
+        # The IDE's Run checks went to the engine run.sh started, so that engine remembers them.
+        with urllib.request.urlopen(f"{engine}/health", timeout=10) as response:
+            health = json.load(response)
+        check("one engine serves every project", health["ok"] and set(DEMOS) <= set(health["projects"]),
+              ", ".join(health["projects"]))
+        envelope = {"project_id": "waveform-generator", "operation": "get_check_results", "arguments": {}}
+        request = urllib.request.Request(f"{engine}/projects/waveform-generator/api/", json.dumps(envelope).encode(),
                                          {"Content-Type": "application/json"})
-        answer = b""
-        for _ in range(60):
-            try:
-                with urllib.request.urlopen(request, timeout=10) as response:
-                    answer = response.read()
-                break
-            except OSError:
-                time.sleep(0.5)
-        check("engine HTTP API answers", b"run_spice" in answer, answer[:120].decode(errors="replace"))
+        with urllib.request.urlopen(request, timeout=30) as response:
+            answer = json.load(response)
+        latest = answer.get("checks", {}).get("run_spice", {})
+        check("headless: the engine's HTTP API sees the IDE's run", latest.get("status") == "PASS",
+              json.dumps(latest)[:120])
+        request = urllib.request.Request(f"{engine}/projects/waveform-generator/api/", json.dumps(envelope).encode(),
+                                         {"Content-Type": "application/json", "Origin": "http://evil.example"})
+        try:
+            urllib.request.urlopen(request, timeout=10)
+            refused = False
+        except urllib.error.HTTPError as error:
+            refused = error.code == 403
+        check("the engine refuses other sites", refused)
 
         dirty = subprocess.run(["git", "-C", str(ROOT), "submodule", "foreach", "--quiet", "git status --porcelain"],
                                capture_output=True, text=True).stdout.strip()

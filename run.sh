@@ -1,21 +1,19 @@
 #!/usr/bin/env bash
-# Starts RocketIDE.
+# Starts RocketIDE: the engine's provisioned tools on PATH, one engine, then every client on that engine.
 #
-#   ./run.sh                      in the browser, http://localhost:5173
-#   ./run.sh desktop              as the desktop app
-#   ./run.sh --engine-http 8765   also the engine's HTTP API, for headless requests
+#   ./run.sh            the engine and the web app, http://localhost:5173
+#   ./run.sh desktop    the engine, the web app and the desktop window, all at once
 #
-# Set ROCKET_UI_HOST / ROCKET_UI_PORT to change the address. The UI server starts the engine (over its
-# stdio MCP adapter) and the agent for whichever project is open.
+# The agent for whichever project is open attaches to the same engine over MCP. Headless clients use it too, at
+# http://127.0.0.1:8765 (ROCKET_ENGINE_PORT): POST /projects/<name>/call, or the engine's own HTTP API at
+# /projects/<name>/api/. Set ROCKET_UI_HOST / ROCKET_UI_PORT to change the web app's address.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODE=web
-ENGINE_HTTP=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     web|desktop) MODE="$1" ;;
-    --engine-http) ENGINE_HTTP="${2:?--engine-http needs a port}"; shift ;;
     -h|--help) sed -n 2,9p "$0" | cut -c3-; exit 0 ;;
     *) echo "Unknown option: $1 (try --help)" >&2; exit 2 ;;
   esac
@@ -29,26 +27,64 @@ if [[ -f "$ROOT/.env" ]]; then
   eval "$EXPORTED"
 fi
 
-export ROCKET_ENGINE_HOME="$ROOT/rocket-engine"
+ENGINE="$ROOT/rocket-engine"
+export ROCKET_ENGINE_HOME="$ENGINE"
 export ROCKET_FUEL_HOME="$ROOT/rocket_fuel"
 export ROCKET_PROJECTS_DIR="${ROCKET_PROJECTS_DIR:-$ROOT/projects}"
 export ROCKET_UI_ROOT="$ROOT/UIUX"
-# Keeps uv from syncing the dev group away from what install.sh chose.
+# Keeps uv from syncing the agent's tool stub to its dev group at every start.
 export UV_NO_SYNC=1
+ENGINE_PORT="${ROCKET_ENGINE_PORT:-8765}"
+UI_PORT="${ROCKET_UI_PORT:-5173}"
 
-[[ -f "$ROOT/UIUX/dist-server/serve.js" ]] || { echo "Not built yet. Run ./install.sh first." >&2; exit 1; }
+[[ -x "$ENGINE/.venv/bin/python" && -f "$ROOT/UIUX/dist-server/serve.js" ]] || { echo "Not built yet. Run ./install.sh first." >&2; exit 1; }
+
+# 1. The tools the engine's provisioner installed, as the engine itself prints them.
+if paths="$(bash "$ENGINE/scripts/provision_toolchain.sh" --print-path 2>/dev/null)"; then
+  eval "$paths"
+else
+  echo "No provisioned toolchain found; using whatever EDA tools are on PATH (install.sh provisions them)." >&2
+fi
+
+# In the container the PDK arrives as a volume, so it is registered here, the way the engine's own image does.
+if [[ "${ROCKET_PDK_AT_START:-0}" == 1 ]]; then
+  "$ENGINE/scripts/install.sh" --pdk-only || {
+    echo "No PDK to register. Mount one at ${PDK_SOURCE:-/pdk}: docker run -v /path/to/sky130A:/pdk:ro ..." >&2
+    exit 1
+  }
+fi
+
 "$ROOT/scripts/seed-projects.sh" >/dev/null
 
-if [[ -n "$ENGINE_HTTP" ]]; then
-  (cd "$ROOT/rocket-engine" && exec uv run --quiet python "$ROOT/scripts/engine-http.py" --port "$ENGINE_HTTP") &
-  HTTP_PID=$!
-  trap 'kill "$HTTP_PID" 2>/dev/null || true' EXIT
-fi
+children=()
+stop() { for pid in "${children[@]}"; do kill "$pid" 2>/dev/null || true; done; }
+trap stop EXIT
+trap 'exit 130' INT TERM
 
+# 2. One engine for every client.
+"$ENGINE/.venv/bin/python" "$ROOT/scripts/engine-host.py" --port "$ENGINE_PORT" --projects-dir "$ROCKET_PROJECTS_DIR" &
+children+=($!)
+export ROCKET_ENGINE_URL="http://127.0.0.1:$ENGINE_PORT"
+for _ in $(seq 1 120); do
+  python3 -I -c "import urllib.request, sys; urllib.request.urlopen(sys.argv[1], timeout=2)" "$ROCKET_ENGINE_URL/health" \
+    2>/dev/null && break
+  kill -0 "${children[0]}" 2>/dev/null || { echo "The engine did not start." >&2; exit 1; }
+  sleep 0.5
+done
+
+# 3. The web app (and through it the agent), then the desktop window on the same server.
 cd "$ROOT/UIUX"
+node dist-server/serve.js &
+children+=($!)
 if [[ "$MODE" == desktop ]]; then
   [[ -f dist-electron/main.js ]] || { echo "No desktop build. Run ./install.sh without --no-desktop." >&2; exit 1; }
-  npx electron .
-else
-  node dist-server/serve.js
+  for _ in $(seq 1 60); do
+    python3 -I -c "import urllib.request, sys; urllib.request.urlopen(sys.argv[1], timeout=2)" \
+      "http://127.0.0.1:$UI_PORT/api/status" 2>/dev/null && break
+    sleep 0.5
+  done
+  # Electron opens a running server instead of starting its own, so both windows share one workspace and agent.
+  VITE_DEV_SERVER_URL="http://127.0.0.1:$UI_PORT" npx electron . &
+  children+=($!)
 fi
+wait -n
