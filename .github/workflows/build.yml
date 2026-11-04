@@ -55,7 +55,7 @@ jobs:
       - name: End-to-end test inside the container
         run: |
           docker run --rm -e PDK_REVISION="$SKY130_REVISION" -v "$RUNNER_TEMP/pdk/sky130A:/pdk:ro" \
-            rocketide python3 scripts/smoke.py
+            rocketide python3 scripts/smoke.py --strict
       - name: Serve the app from the container
         run: |
           docker run -d --name rocketide -p 127.0.0.1:5173:5173 \
@@ -103,7 +103,7 @@ jobs:
         # The window's libraries, and what the engine's provisioner builds its tools with (rocket-engine/Dockerfile).
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xvfb imagemagick \
+          sudo apt-get install -y --no-install-recommends xvfb imagemagick ngspice \
             libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libgtk-3-0t64 libgbm1 libasound2t64 \
             make cmake gcc g++ gfortran bison flex swig tcl tcl-dev tk tk-dev libx11-dev bzip2 xz-utils unzip
       - name: Install, the engine's way
@@ -131,6 +131,43 @@ jobs:
             desktop.png
             desktop.log
 
+  agent:
+    name: Agent guardrails and UI tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v5
+      - uses: oven-sh/setup-bun@v2
+      - name: Install the agent
+        working-directory: rocket_fuel
+        run: |
+          npm ci --no-audit --no-fund
+          (cd mcp-stub && uv sync --locked --no-dev)
+      - name: Scripted scenarios, including what the tutor and reviewer can't do
+        working-directory: rocket_fuel
+        run: python3 -I evals/run_scenarios.py
+      - name: Plugin and client tests
+        working-directory: rocket_fuel
+        run: |
+          python3 -I scripts/meta_relay_test.py
+          (cd plugin && bun install --frozen-lockfile && bun test)
+          (cd client && bun install --frozen-lockfile && bun test)
+      - name: UI tests and types
+        working-directory: UIUX
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+        run: |
+          npm ci --no-audit --no-fund --ignore-scripts
+          npx tsc -b --noEmit
+          npm test
+
   demos:
     name: MobileLLM checks
     runs-on: ubuntu-24.04
@@ -144,16 +181,16 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends iverilog
-      - name: MobileLLM contract tests and elaboration
+      # Not src/scripts/elab.sh: elaborating the whole chip at once outlasts this job's time limit. The Docker job
+      # runs the mac_unit testbench through the engine.
+      - name: MobileLLM contract tests
         working-directory: Demos/albert-chip-demo
-        run: |
-          python3 -m unittest discover -s architecture/tests
-          bash src/scripts/elab.sh
+        run: python3 -m unittest discover -s architecture/tests
 
   release:
     name: Publish release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [docker, desktop, demos]
+    needs: [docker, desktop, agent, demos]
     runs-on: ubuntu-24.04
     timeout-minutes: 150
     permissions:

@@ -50,6 +50,7 @@ new_project() {
 }
 new_project opamp-engine opamp
 new_project empty sketch
+new_project lesson-1-rc-filter lesson-1
 
 ENGINE_PORT="$(free_port)"
 "$ENGINE/.venv/bin/python" scripts/engine-host.py --port "$ENGINE_PORT" --projects-dir "$ROCKET_PROJECTS_DIR" >"$WORK/engine.log" 2>&1 &
@@ -90,7 +91,7 @@ record() {
 
 declare -i failed=0
 wanted=("$@")
-[[ ${#wanted[@]} -gt 0 ]] || wanted=(1-sketch-to-circuit 2-opamp-to-spec 3-learn-mode 4-second-opinion 5-mac-unit-check)
+[[ ${#wanted[@]} -gt 0 ]] || wanted=(1-sketch-to-circuit 2-opamp-to-spec 3-learn-mode 4-second-opinion 5-mac-unit-check 6-first-lesson)
 for name in "${wanted[@]}"; do
   case "$name" in
     1-sketch-to-circuit) record "$name" sketch \
@@ -103,6 +104,7 @@ for name in "${wanted[@]}"; do
       "Give me an independent second opinion on this design and its evidence." rocket-reviewer || failed+=1 ;;
     5-mac-unit-check) record "$name" albert-chip-demo \
       "Run this project's checks with the engine, then explain what the mac_unit testbench proves and what it doesn't." || failed+=1 ;;
+    6-first-lesson) record "$name" lesson-1 "Start this lesson with me. I've never designed a circuit before." rocket-tutor || failed+=1 ;;
     *) echo "Unknown run: $name" >&2; failed+=1 ;;
   esac
 done
