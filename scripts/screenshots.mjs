@@ -71,4 +71,47 @@ await shot("plots", async () => {
   await post("/api/project/checks/run");
   await open("lesson-1-rc-filter", "plots");
 });
+// Verification: a failing run, then the fix the lesson teaches, so the trends have something to show.
+await shot("verification-fail", async () => {
+  await open("lesson-1-rc-filter", "verification");
+  await page.waitForTimeout(1500);
+});
+await shot("verification", async () => {
+  const file = await (await page.request.get(`${base}/api/project/file?path=design/rc_filter.cir`)).json();
+  await page.request.put(`${base}/api/project/file`, { data: { path: "design/rc_filter.cir", content: file.content.replace("R1=10k", "R1=1k") } });
+  await post("/api/project/checks/run");
+  await open("lesson-1-rc-filter", "verification");
+  await page.waitForTimeout(1500);
+});
+await shot("verification-albert", async () => {
+  await post("/api/projects/albert-chip-demo/open");
+  await post("/api/project/checks/run");
+  await open("albert-chip-demo", "verification");
+  await page.waitForTimeout(3000);
+});
+// The Live build page, while the scripted test model "builds" a counter (see test-model.py).
+await shot("live-start", async () => {
+  await post("/api/project/close");
+  await page.goto("about:blank");
+  await page.goto(base);
+  await page.click(".home-new");
+  await page.fill(".home-dialog textarea", "An 8-bit counter with enable and reset");
+  await page.click(".home-dialog .primary-button");
+  await page.waitForSelector(".composer textarea:not([disabled])", { timeout: 90000 });
+  await page.waitForTimeout(1000);
+});
+// Send the request, then keep approving what the assistant asks to change, and take pictures along the way.
+await page.click(".composer button.send").catch((error) => console.log("FAILED send", String(error).slice(0, 160)));
+// Frequent enough to catch code arriving, drawings part-way, and each scene's end.
+const pictures = {};
+for (let second = 6; second <= 58; second += 4) pictures[second] = `live-${String(second).padStart(2, "0")}`;
+for (let second = 0; second <= 70; second++) {
+  const approve = page.getByRole("button", { name: "Approve" }).first();
+  if (await approve.isVisible().catch(() => false)) await approve.click().catch(() => undefined);
+  if (pictures[second]) await shot(pictures[second], async () => undefined);
+  await page.waitForTimeout(1000);
+}
+await shot("live-end", async () => {
+  await page.waitForTimeout(3000);
+});
 await browser.close();

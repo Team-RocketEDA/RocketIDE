@@ -58,8 +58,11 @@ jobs:
             rocketide python3 scripts/smoke.py --strict
       - name: Serve the app from the container
         run: |
+          # A scripted stand-in for the model, so the screenshots can show the Live build page at work.
           docker run -d --name rocketide -p 127.0.0.1:5173:5173 \
+            -e MODEL_API_KEY=test-only -e ROCKET_META_UPSTREAM=http://127.0.0.1:8799 \
             -e PDK_REVISION="$SKY130_REVISION" -v "$RUNNER_TEMP/pdk/sky130A:/pdk:ro" rocketide
+          docker exec -d rocketide python3 -I scripts/test-model.py 8799
           for _ in $(seq 1 120); do
             curl -fsS http://localhost:5173/api/status && break
             sleep 2
