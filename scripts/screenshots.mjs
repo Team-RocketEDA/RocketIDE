@@ -102,17 +102,16 @@ await shot("live-start", async () => {
 });
 // Send the request, then keep approving what the assistant asks to change, and take pictures along the way.
 await page.click(".composer button.send").catch((error) => console.log("FAILED send", String(error).slice(0, 160)));
-const pictures = { 12: "live-counter", 24: "live-top", 36: "live-schematic", 56: "live-done" };
-for (let second = 0; second <= 60; second++) {
+// Frequent enough to catch code arriving, drawings part-way, and each scene's end.
+const pictures = {};
+for (let second = 6; second <= 58; second += 4) pictures[second] = `live-${String(second).padStart(2, "0")}`;
+for (let second = 0; second <= 70; second++) {
   const approve = page.getByRole("button", { name: "Approve" }).first();
   if (await approve.isVisible().catch(() => false)) await approve.click().catch(() => undefined);
   if (pictures[second]) await shot(pictures[second], async () => undefined);
   await page.waitForTimeout(1000);
 }
-await shot("live-pick-blocks", async () => {
-  await page.locator(".live-step", { hasText: "counter_top" }).first().click();
-  await page.waitForTimeout(800);
-  await page.locator(".block-node").first().click();
-  await page.waitForTimeout(400);
+await shot("live-end", async () => {
+  await page.waitForTimeout(3000);
 });
 await browser.close();

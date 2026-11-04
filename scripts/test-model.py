@@ -43,6 +43,8 @@ STEPS = [
     ("write", {"filePath": "{project}/README.md", "content": "# Counter\n\nAn 8-bit counter with enable and reset.\n"}),
     ("write", {"filePath": "{project}/src/counter.v", "content": COUNTER}),
     ("write", {"filePath": "{project}/src/counter_top.v", "content": TOP}),
+    ("edit", {"filePath": "{project}/src/counter.v", "oldString": "else if (en) count <= count + 1;", "newString": "// count only while enabled\n    else if (en) count <= count + 1'b1;"}),
+    ("write", {"filePath": "{project}/docs/diagrams/counter.svg", "content": '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 160"><rect x="20" y="40" width="130" height="70" fill="none" stroke="#111" stroke-width="2"/><text x="85" y="80" text-anchor="middle" font-size="16">counter</text><path d="M150 75 H250" stroke="#111" stroke-width="2"/><rect x="250" y="40" width="130" height="70" fill="none" stroke="#111" stroke-width="2"/><text x="315" y="80" text-anchor="middle" font-size="16">tick_detect</text></svg>'}),
     ("write", {"filePath": "{project}/design/rc.cir", "content": "* A filter on the output\n.subckt rc in out gnd\nR1 in out 1k\nC1 out gnd 100n\n.ends rc\n"}),
 ]
 DELAY = 6
