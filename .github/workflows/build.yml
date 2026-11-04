@@ -2,6 +2,9 @@
 #
 # The submodules are other repos, which the default token can't read, so this needs a SUBMODULES_TOKEN secret:
 # a token with read access to the contents of rocket-engine, rocket_fuel, UIUX and the three demo repos.
+#
+# The engine's installer registers a PDK and stops without one. CI uses a prebuilt sky130A from ciel-releases,
+# only the parts the demos use (common, primitives, HD cells), and tells the engine its revision.
 name: Build and test
 
 on:
@@ -18,24 +21,46 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  SKY130_REVISION: 792ef67037d74c8c51811eab3ce23cf793491296
+
 jobs:
   docker:
     name: Docker image
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    # The image builds the engine's toolchain from source.
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
           token: ${{ secrets.SUBMODULES_TOKEN }}
+      - name: sky130A (cached)
+        id: pdk-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/pdk
+          key: sky130A-${{ env.SKY130_REVISION }}-pr-hd
+      - name: Fetch sky130A
+        if: steps.pdk-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$RUNNER_TEMP/pdk"
+          base="https://github.com/fossi-foundation/ciel-releases/releases/download/sky130-$SKY130_REVISION"
+          for part in common sky130_fd_pr sky130_fd_sc_hd; do
+            curl -fsSL "$base/$part.tar.zst" | tar --zstd -x -C "$RUNNER_TEMP/pdk" --wildcards 'sky130A/*'
+          done
+          test -f "$RUNNER_TEMP/pdk/sky130A/.config/nodeinfo.json"
       - name: Build the image
         run: docker build -t rocketide .
       - name: End-to-end test inside the container
-        run: docker run --rm rocketide python3 scripts/smoke.py
+        run: |
+          docker run --rm -e PDK_REVISION="$SKY130_REVISION" -v "$RUNNER_TEMP/pdk/sky130A:/pdk:ro" \
+            rocketide python3 scripts/smoke.py
       - name: Serve the app from the container
         run: |
-          docker run -d --name rocketide -p 127.0.0.1:5173:5173 rocketide
-          for _ in $(seq 1 60); do
+          docker run -d --name rocketide -p 127.0.0.1:5173:5173 \
+            -e PDK_REVISION="$SKY130_REVISION" -v "$RUNNER_TEMP/pdk/sky130A:/pdk:ro" rocketide
+          for _ in $(seq 1 120); do
             curl -fsS http://localhost:5173/api/status && break
             sleep 2
           done
@@ -48,22 +73,44 @@ jobs:
   desktop:
     name: Desktop app
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # install.sh provisions the engine's toolchain, building some of it from source.
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
           token: ${{ secrets.SUBMODULES_TOKEN }}
+      - name: sky130A (cached)
+        id: pdk-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/pdk
+          key: sky130A-${{ env.SKY130_REVISION }}-pr-hd
+      - name: Fetch sky130A
+        if: steps.pdk-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$RUNNER_TEMP/pdk"
+          base="https://github.com/fossi-foundation/ciel-releases/releases/download/sky130-$SKY130_REVISION"
+          for part in common sky130_fd_pr sky130_fd_sc_hd; do
+            curl -fsSL "$base/$part.tar.zst" | tar --zstd -x -C "$RUNNER_TEMP/pdk" --wildcards 'sky130A/*'
+          done
+          test -f "$RUNNER_TEMP/pdk/sky130A/.config/nodeinfo.json"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - uses: astral-sh/setup-uv@v5
       - name: Install system packages
+        # The window's libraries, and what the engine's provisioner builds its tools with (rocket-engine/Dockerfile).
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ngspice xvfb imagemagick \
-            libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libgtk-3-0t64 libgbm1 libasound2t64
-      - run: ./install.sh
+          sudo apt-get install -y --no-install-recommends xvfb imagemagick \
+            libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libgtk-3-0t64 libgbm1 libasound2t64 \
+            make cmake gcc g++ gfortran bison flex swig tcl tcl-dev tk tk-dev libx11-dev bzip2 xz-utils unzip
+      - name: Install, the engine's way
+        env:
+          PDK_SOURCE: ${{ runner.temp }}/pdk/sky130A
+          PDK_REVISION: ${{ env.SKY130_REVISION }}
+        run: ./install.sh
       - name: Open the window and capture it
         env:
           DISPLAY: ":99"
@@ -96,7 +143,11 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - name: Install the engine with its photonic groups
         working-directory: rocket-engine
-        run: uv sync --locked --group photonic --group layout
+        # The engine installer's own steps, plus the two groups.
+        run: |
+          uv venv --python 3.12
+          uv sync --locked --group dev --group photonic --group layout --no-install-project
+          uv pip install --python .venv/bin/python --no-deps .
       - name: Engine keeps optical spectra
         working-directory: rocket-engine
         run: uv run --no-sync pytest tests/adapters/test_mcp_agent_path.py -k optical -q -rs
@@ -135,7 +186,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [docker, desktop, photonic, demos]
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 150
     permissions:
       contents: write
     steps:
@@ -144,6 +195,21 @@ jobs:
           submodules: recursive
           token: ${{ secrets.SUBMODULES_TOKEN }}
           fetch-depth: 0
+      - name: sky130A (cached)
+        id: pdk-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/pdk
+          key: sky130A-${{ env.SKY130_REVISION }}-pr-hd
+      - name: Fetch sky130A
+        if: steps.pdk-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$RUNNER_TEMP/pdk"
+          base="https://github.com/fossi-foundation/ciel-releases/releases/download/sky130-$SKY130_REVISION"
+          for part in common sky130_fd_pr sky130_fd_sc_hd; do
+            curl -fsSL "$base/$part.tar.zst" | tar --zstd -x -C "$RUNNER_TEMP/pdk" --wildcards 'sky130A/*'
+          done
+          test -f "$RUNNER_TEMP/pdk/sky130A/.config/nodeinfo.json"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -151,4 +217,10 @@ jobs:
       - name: Build and upload the archive
         env:
           GH_TOKEN: ${{ github.token }}
-        run: ./install.sh --no-desktop --release "$GITHUB_REF_NAME"
+          PDK_SOURCE: ${{ runner.temp }}/pdk/sky130A
+          PDK_REVISION: ${{ env.SKY130_REVISION }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            make cmake gcc g++ gfortran bison flex swig tcl tcl-dev tk tk-dev libx11-dev bzip2 xz-utils unzip
+          ./install.sh --no-desktop --release "$GITHUB_REF_NAME"
