@@ -70,6 +70,14 @@ what the agent says.
     <td valign="top"><b>Verification.</b> Every check with its target, measured value, margin, source revision and the run that produced it.</td>
     <td valign="top"><b>Schematic.</b> Drawn from the netlists at this revision, with hierarchy, symbols and nets.</td>
   </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/picker.png" alt="Start screen with the RocketIDE logo: create a project from a template or open one of the three demos"></td>
+    <td width="50%"><img src="docs/images/constraints.png" alt="Constraints page: PDK, domains, approval mode, repair limit and each check's target"></td>
+  </tr>
+  <tr>
+    <td valign="top"><b>Start screen.</b> Create a project from a template or open a demo. The engine's tools are listed with what's installed.</td>
+    <td valign="top"><b>Constraints.</b> The targets the engine grades against, the approval mode and the repair limit, saved to <code>constraints.yaml</code> as a commit.</td>
+  </tr>
 </table>
 
 ## Demo projects
