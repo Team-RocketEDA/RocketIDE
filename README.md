@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/banner.svg" alt="RocketIDE: design chips with an AI agent beside you. Every PASS comes from a real EDA tool." width="100%">
+  <img src="docs/brand/animations/banner-animated.svg" alt="RocketIDE: design chips with an AI agent beside you. Every PASS comes from a real EDA tool." width="100%">
 </p>
 
 <p align="center">
@@ -262,6 +262,16 @@ To move a part to the latest commit of its branch:
 ```sh
 git submodule update --remote rocket-engine && git add rocket-engine && scripts/smoke.py
 ```
+
+## Brand
+
+<img src="docs/brand/logo.svg" width="48" height="48" align="left" alt="RocketIDE logo">
+
+The mark is **Launch Chip**: a rocket whose body carries a chip's pins. [`docs/brand/`](docs/brand/README.md) has it
+as SVG and PNG at every size from 16 to 1024 px, with the name, as a favicon and a social preview, and as launch and loop
+animations (SVG, WebM and animated PNG), plus the colours, type and rules for using it.
+
+<br clear="left">
 
 ## Testing and releases
 
