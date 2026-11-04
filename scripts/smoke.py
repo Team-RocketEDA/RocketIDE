@@ -2,7 +2,8 @@
 """End-to-end check of the assembled IDE: starts it the way ./run.sh does, with a throwaway projects folder, and
 drives the same HTTP API the browser uses. A check whose EDA tool isn't installed is reported as SKIP, not passed.
 
-Usage: scripts/smoke.py [--port 5199] [--agent]
+Usage: scripts/smoke.py [--port 5199] [--agent] [--strict]
+--strict fails instead of skipping when a tool is missing, so a clean machine can't pass by not running anything.
 --agent also sends one prompt to Muse Spark, which needs your Meta API key, added in the app or in .env.
 """
 
@@ -172,6 +173,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=5199)
     parser.add_argument("--agent", action="store_true")
+    parser.add_argument("--strict", action="store_true")
     args = parser.parse_args()
 
     projects = Path(tempfile.mkdtemp(prefix="rocketide-smoke-"))
@@ -261,7 +263,7 @@ def main():
         shutil.rmtree(projects, ignore_errors=True)
 
     print(f"\n{results.count('PASS')} passed, {results.count('FAIL')} failed, {results.count('SKIP')} skipped")
-    return 1 if "FAIL" in results else 0
+    return 1 if "FAIL" in results or (args.strict and "SKIP" in results) else 0
 
 
 if __name__ == "__main__":

@@ -119,7 +119,7 @@ foundry PDK.
 provisioner uses to install the EDA tools. On Ubuntu 24.04:
 
 ```sh
-sudo apt-get install -y curl git zstd python3 python3-venv make cmake gcc g++ gfortran bison flex swig \
+sudo apt-get install -y curl git zstd ngspice python3 python3-venv make cmake gcc g++ gfortran bison flex swig \
   tcl tcl-dev tk tk-dev libx11-dev bzip2 xz-utils unzip
 ```
 

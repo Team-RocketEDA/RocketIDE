@@ -29,7 +29,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # its tools (rocket-engine/Dockerfile, docs/provision-sources.md).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       ca-certificates curl git python3 python3-venv \
+       ca-certificates curl git python3 python3-venv ngspice \
        make cmake gcc g++ gfortran bison flex swig \
        tcl tcl-dev tk tk-dev libx11-dev \
        bzip2 xz-utils unzip sudo \

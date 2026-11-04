@@ -55,7 +55,7 @@ jobs:
       - name: End-to-end test inside the container
         run: |
           docker run --rm -e PDK_REVISION="$SKY130_REVISION" -v "$RUNNER_TEMP/pdk/sky130A:/pdk:ro" \
-            rocketide python3 scripts/smoke.py
+            rocketide python3 scripts/smoke.py --strict
       - name: Serve the app from the container
         run: |
           docker run -d --name rocketide -p 127.0.0.1:5173:5173 \
@@ -103,7 +103,7 @@ jobs:
         # The window's libraries, and what the engine's provisioner builds its tools with (rocket-engine/Dockerfile).
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xvfb imagemagick \
+          sudo apt-get install -y --no-install-recommends xvfb imagemagick ngspice \
             libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libgtk-3-0t64 libgbm1 libasound2t64 \
             make cmake gcc g++ gfortran bison flex swig tcl tcl-dev tk tk-dev libx11-dev bzip2 xz-utils unzip
       - name: Install, the engine's way
