@@ -3,8 +3,9 @@
 # registered at start, then one engine shared by the web app, the agent and headless clients.
 #
 #   docker build -t rocketide .
-#   docker run --rm -p 127.0.0.1:5173:5173 \
-#     -v /path/to/sky130A:/pdk:ro -v rocketide-store:/stores/rocketeda -v rocketide-projects:/opt/rocketide/projects \
+#   scripts/fetch-pdk.sh      # the open-source sky130A, about 140 MB, into ~/.local/share/pdk/sky130A
+#   docker run --rm -p 127.0.0.1:5173:5173 -e MODEL_API_KEY \
+#     -v "$HOME/.local/share/pdk/sky130A:/pdk:ro" -v rocketide-store:/stores/rocketeda -v rocketide-projects:/opt/rocketide/projects \
 #     rocketide
 #   open http://localhost:5173
 #
@@ -12,8 +13,8 @@
 # The PDK is never in the image (sky130A is about 12 GB). Without one at /pdk the container stops, as the engine's
 # does. Another PDK: -e PDK_ID=... -e PDK_REVISION=... (see rocket-engine/scripts/install.sh).
 #
-# Model: the free default needs no key. For Muse Spark add
-#   -e ROCKET_MODEL=meta/muse-spark-1.3 -e MODEL_API_KEY=...
+# Model: Muse Spark, through the Meta Model API. -e MODEL_API_KEY passes your key from the shell, and the container's
+# log prints every call. Without a key the IDE and engine checks still work.
 # Headless API, from inside the container: http://127.0.0.1:8765 (loopback only, no auth).
 FROM ubuntu:24.04
 
@@ -51,8 +52,8 @@ RUN mkdir -p projects /tools /stores/rocketeda /pdk \
     && chown -R rocketeda:rocketeda /opt/rocketide /tools /stores /pdk
 USER rocketeda
 
-# The free model works with no key; set ROCKET_MODEL and MODEL_API_KEY at run time for another.
-ENV ROCKET_MODEL=opencode/beam-free \
+# Only Meta models run. Set MODEL_API_KEY at run time.
+ENV ROCKET_MODEL=meta/muse-spark-1.3 \
     ROCKET_UI_HOST=0.0.0.0 \
     ROCKET_UI_PORT=5173 \
     ROCKET_PDK_AT_START=1
