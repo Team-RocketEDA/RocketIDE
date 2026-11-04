@@ -150,8 +150,8 @@ foundry PDK.
 docker run --rm -p 127.0.0.1:5173:5173 ghcr.io/team-rocketeda/rocketide
 ```
 
-Then open http://localhost:5173. The first start downloads the open-source sky130A PDK (about 140 MB), and the log prints
-every model call. To keep your projects and that download between runs, add
+The image is about 4 GB to download. Then open http://localhost:5173, and paste your Meta Model API key into the assistant
+panel. The first start downloads the open-source sky130A PDK (about 140 MB), and the log prints every model call. To keep your projects and that download between runs, add
 `-v rocketide-store:/stores/rocketeda -v rocketide-projects:/opt/rocketide/projects`. The image is built for x86-64, and
 runs more slowly under emulation on Apple Silicon.
 

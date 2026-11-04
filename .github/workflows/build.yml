@@ -72,6 +72,11 @@ jobs:
             sleep 2
           done
           docker logs rocketide | grep -q "Downloading the open-source sky130A"
+          # Adding a key in the app: it's checked, kept on the store volume and never comes back.
+          curl -fsS -X PUT http://localhost:5173/api/model-key -H 'Content-Type: application/json' -d '{"key":"test-only-key"}' | grep -q '"source":"saved"'
+          curl -fsS http://localhost:5173/api/model-key | grep -q '"configured":true'
+          ! curl -fsS http://localhost:5173/api/model-key | grep -q test-only-key
+          docker exec rocketide grep -q '^MODEL_API_KEY=test-only-key$' /stores/rocketeda/credentials
           curl -fsS http://localhost:5173/ | grep 'id="root"'
           curl -fsS http://localhost:5173/api/projects | grep albert-chip-demo
       - name: Screenshots of the app
