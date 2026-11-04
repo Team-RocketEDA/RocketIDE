@@ -104,6 +104,10 @@ them under **Activity**. Keys and prompts are never printed or saved.
 
 The project's GDS, read and drawn in the browser: layers, cells, pan and zoom. Find in layout marks what you name on it.
 
+**Diagrams** shows what the design actually is: a block diagram read directly from the project's Verilog, which you can
+click through from the top of the chip down, plus the pictures and interactive pages the project holds, including any
+the assistant draws.
+
 ## Demo project
 
 **MobileLLM-125M decoder chip** (`Demos/albert-chip-demo`) is a transformer decoder in RTL on sky130A, with a first block
