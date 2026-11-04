@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PARTS = ["rocket-engine", "rocket_fuel", "UIUX", "Demos/albert-chip-demo", "Demos/photonic_matmul", "Demos/waveform-generator"]
+PARTS = ["rocket-engine", "rocket_fuel", "UIUX", "Demos/albert-chip-demo"]
 
 
 def commit(path):

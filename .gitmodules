@@ -10,14 +10,6 @@
 	path = UIUX
 	url = https://github.com/Team-RocketEDA/UIUX.git
 	branch = main
-[submodule "Demos/photonic_matmul"]
-	path = Demos/photonic_matmul
-	url = https://github.com/Team-RocketEDA/photonic_matmul.git
-	branch = main
-[submodule "Demos/waveform-generator"]
-	path = Demos/waveform-generator
-	url = https://github.com/Team-RocketEDA/waveform-generator.git
-	branch = main
 [submodule "Demos/albert-chip-demo"]
 	path = Demos/albert-chip-demo
 	url = https://github.com/Team-RocketEDA/albert-chip-demo.git

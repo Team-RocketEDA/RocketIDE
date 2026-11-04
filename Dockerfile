@@ -21,8 +21,8 @@ FROM ubuntu:24.04
 
 ARG NODE_VERSION=22.12.0
 ARG UV_VERSION=0.12.23
-# Passed to install.sh. Remove --photonic for a smaller image without optical and layout runs.
-ARG INSTALL_FLAGS="--no-desktop --photonic --container"
+# Passed to install.sh. Add --photonic for optical and layout runs, in a larger image.
+ARG INSTALL_FLAGS="--no-desktop --container"
 
 ENV DEBIAN_FRONTEND=noninteractive
 # python3 is Ubuntu's 3.12, the engine's pin. The rest is what the engine's provisioner needs to fetch and build
