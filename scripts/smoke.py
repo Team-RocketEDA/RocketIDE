@@ -84,6 +84,12 @@ def run_checks(api, name, expect):
         return None
     problem = expect(verdict) if verdict else f"HTTP {status}: {str(result)[:160]}"
     check(f"{name}: checks", problem is None, problem or verdict.get("status", ""))
+    if verdict.get("measurements"):
+        # The Overview pairs each check with the measurement named by its metric; an unmatched check never shows a result.
+        _, project = api.json("GET", "/api/project")
+        metrics = [c.get("metric") for c in ((project or {}).get("constraints") or {}).get("checks") or []]
+        unmatched = sorted(set(metrics) - set(measured(verdict)))
+        check(f"{name}: every check is measured", bool(metrics) and not unmatched, ", ".join(unmatched)[:160])
     return result
 
 

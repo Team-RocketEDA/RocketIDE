@@ -87,4 +87,10 @@ if [[ "$MODE" == desktop ]]; then
   VITE_DEV_SERVER_URL="http://127.0.0.1:$UI_PORT" npx electron . &
   children+=($!)
 fi
-wait -n
+# Stop when the first of them exits, with its status. Not `wait -n`: macOS ships bash 3.2, which has no -n.
+while :; do
+  for pid in "${children[@]}"; do
+    kill -0 "$pid" 2>/dev/null || { wait "$pid"; exit $?; }
+  done
+  sleep 1
+done
