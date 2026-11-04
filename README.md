@@ -37,13 +37,13 @@ what the agent says.
 
 ## Who it's for
 
-Students who want to learn chip design by building one. Learning it usually means costly professional tools, a hard
-setup and slow feedback. RocketIDE runs on free, open-source tools and a free PDK. A student can start from a sketch on
-paper, get a working design, and learn from a tutor that teaches from their own circuit. Every result comes from a real
-simulator, so what they learn is true.
+Anyone who designs chips. The usual path means costly professional tools, a hard setup and slow feedback between changing
+a design and finding out whether it works. RocketIDE runs on free, open-source tools and a free PDK. Describe a block, or
+start from a sketch or a spec, and the agent builds the design and its tests while you watch. Every result comes from a
+real simulator, so a pass means something.
 
-New to it? The start screen offers three guided lessons: your first filter, your first amplifier, and a real op-amp. Each
-starts out failing, the student makes the fix, and the simulator decides when they've passed.
+New to chip design? The start screen also has three guided lessons: your first filter, your first amplifier, and a real
+op-amp. Each starts out failing, you make the fix, and the simulator decides when you've passed.
 
 ## Why RocketIDE
 
@@ -74,8 +74,8 @@ Each Meta model does the job it's best at, and none of them decides whether a de
 | Model | What it does here | Where to find it |
 |---|---|---|
 | **Muse Spark 1.3** | Runs the design agent: reads the project, edits the design, calls the engine's tools, reads the measurements and repairs what failed | The assistant panel |
-| **Muse Spark, seeing** | Turns a photo of a hand-drawn circuit into a netlist and a testbench the engine then simulates. Reads a lab sheet or datasheet PDF and proposes its targets. Looks at the layout, plot or schematic you have open | **Attach** and **This view** |
-| **Muse Spark, teaching** | Learn mode: explains from the student's own circuit and measurements, and asks questions back. It can run checks but can't edit, so the student makes the changes | **Learn** |
+| **Muse Spark, seeing** | Turns a photo of a hand-drawn circuit into a netlist and a testbench the engine then simulates. Reads a spec or datasheet PDF and proposes its targets. Looks at the layout, plot or schematic you have open | **Attach** and **This view** |
+| **Muse Spark, teaching** | Learn mode: explains from your own circuit and measurements, and asks questions back. It can run checks but can't edit, so you make the changes | **Learn** |
 | **Muse Wonder 1.0** | An independent auditor of the work: do the checks test what they claim, how thin are the margins, what isn't covered? It can't edit, start runs or change a verdict | **Second opinion** |
 | **SAM 3.1** | Marks what you name on a chip layout, such as "power rails" | **Find in layout** |
 
@@ -129,7 +129,7 @@ them under **Activity**. Keys and prompts are never printed or saved.
   </tr>
   <tr>
     <td valign="top"><b>Layout.</b> The project's GDS, read and drawn in the browser. Find in layout marks what you name on it.</td>
-    <td valign="top"><b>Lessons.</b> Each starts out failing, the student makes the fix, and the simulator decides when they've passed.</td>
+    <td valign="top"><b>Lessons.</b> Each starts out failing, you make the fix, and the simulator decides when you've passed.</td>
   </tr>
 </table>
 
