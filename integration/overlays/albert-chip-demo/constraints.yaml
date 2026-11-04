@@ -5,8 +5,8 @@ description: A digital transformer decoder in RTL, with a first block placed and
 pdk: sky130A
 domains: [digital]
 agent:
-  iteration_limit: 3
-  mode: approval
+  iteration_limit: 10
+  mode: auto
 simulation:
   operation: run_hdl_test
   sources: [src/components/mac_unit.v, src/tb/tb_mac_unit.v]

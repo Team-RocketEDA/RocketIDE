@@ -71,6 +71,24 @@ await shot("plots", async () => {
   await post("/api/project/checks/run");
   await open("lesson-1-rc-filter", "plots");
 });
+// Verification: a failing run, then the fix the lesson teaches, so the trends have something to show.
+await shot("verification-fail", async () => {
+  await open("lesson-1-rc-filter", "verification");
+  await page.waitForTimeout(1500);
+});
+await shot("verification", async () => {
+  const file = await (await page.request.get(`${base}/api/project/file?path=design/rc_filter.cir`)).json();
+  await page.request.put(`${base}/api/project/file`, { data: { path: "design/rc_filter.cir", content: file.content.replace("R1=10k", "R1=1k") } });
+  await post("/api/project/checks/run");
+  await open("lesson-1-rc-filter", "verification");
+  await page.waitForTimeout(1500);
+});
+await shot("verification-albert", async () => {
+  await post("/api/projects/albert-chip-demo/open");
+  await post("/api/project/checks/run");
+  await open("albert-chip-demo", "verification");
+  await page.waitForTimeout(3000);
+});
 // The Live build page, while the scripted test model "builds" a counter (see test-model.py).
 await shot("live-start", async () => {
   await post("/api/project/close");
