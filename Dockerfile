@@ -1,23 +1,27 @@
 # RocketIDE in one container, set up the way the engine's own image is (rocket-engine/Dockerfile): the engine's
-# locked environment and its pinned toolchain from scripts/provision_toolchain.sh --install, the PDK on a volume
-# registered at start, then one engine shared by the web app, the agent and headless clients.
+# locked environment and its pinned toolchain from scripts/provision_toolchain.sh --install, the PDK registered at start,
+# then one engine shared by the web app, the agent and headless clients.
 #
-#   docker build -t rocketide .
-#   scripts/fetch-pdk.sh      # the open-source sky130A, about 140 MB, into ~/.local/share/pdk/sky130A
-#   docker run --rm -p 127.0.0.1:5173:5173 -e MODEL_API_KEY \
-#     -v "$HOME/.local/share/pdk/sky130A:/pdk:ro" -v rocketide-store:/stores/rocketeda -v rocketide-projects:/opt/rocketide/projects \
-#     rocketide
+# CI publishes this image, so the quickest way to run it is:
+#
+#   docker run --rm -p 127.0.0.1:5173:5173 ghcr.io/team-rocketeda/rocketide
 #   open http://localhost:5173
 #
-# Build from a checkout with its submodules present: git submodule update --init --recursive
-# The PDK is never in the image (sky130A is about 12 GB). Without one at /pdk the container stops, as the engine's
-# does. Another PDK: -e PDK_ID=... -e PDK_REVISION=... (see rocket-engine/scripts/install.sh).
+# To build it yourself, from a checkout with its submodules (git submodule update --init --recursive):
+#
+#   docker build -t rocketide .
+#
+# With no PDK at /pdk, the first start downloads the open-source sky130A onto the store volume. Keep your work and that
+# download between runs with -v rocketide-store:/stores/rocketeda -v rocketide-projects:/opt/rocketide/projects.
+# Your own PDK: -v /path/to/sky130A:/pdk:ro, and -e PDK_ID=... -e PDK_REVISION=... if it isn't sky130A.
 #
 # Model: Muse Spark, through the Meta Model API. Add your key in the app's assistant panel (it's kept on the store
 # volume), or pass it from the shell with -e MODEL_API_KEY. The container's log prints every call. Without a key the
 # IDE and engine checks still work.
 # Headless API, from inside the container: http://127.0.0.1:8765 (loopback only, no auth).
 FROM ubuntu:24.04
+LABEL org.opencontainers.image.source="https://github.com/Team-RocketEDA/RocketIDE"
+LABEL org.opencontainers.image.description="RocketIDE: design chips with an AI agent beside you. Every result comes from a real tool."
 
 ARG NODE_VERSION=22.12.0
 ARG UV_VERSION=0.12.23
@@ -29,7 +33,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # its tools (rocket-engine/Dockerfile, docs/provision-sources.md).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       ca-certificates curl git python3 python3-venv ngspice \
+       ca-certificates curl git python3 python3-venv ngspice zstd \
        make cmake gcc g++ gfortran bison flex swig \
        tcl tcl-dev tk tk-dev libx11-dev \
        bzip2 xz-utils unzip sudo \

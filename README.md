@@ -144,7 +144,18 @@ foundry PDK.
 
 ## Quick start
 
-**You need** `git`, Node 20.12 or newer, [`uv`](https://docs.astral.sh/uv/), `zstd`, and the build tools the engine's
+**The quickest way is Docker.** You need nothing else, and no account:
+
+```sh
+docker run --rm -p 127.0.0.1:5173:5173 ghcr.io/team-rocketeda/rocketide
+```
+
+Then open http://localhost:5173. The first start downloads the open-source sky130A PDK (about 140 MB), and the log prints
+every model call. To keep your projects and that download between runs, add
+`-v rocketide-store:/stores/rocketeda -v rocketide-projects:/opt/rocketide/projects`. The image is built for x86-64, and
+runs more slowly under emulation on Apple Silicon.
+
+**To install it on your machine,** you need `git`, Node 20.12 or newer, [`uv`](https://docs.astral.sh/uv/), `zstd`, and the build tools the engine's
 provisioner uses to install the EDA tools. On Ubuntu 24.04:
 
 ```sh
@@ -183,25 +194,19 @@ also set `MODEL_API_KEY` in `.env`, but a key saved in the app takes priority.
   assistant panel, marked REPLAY, without calling any model.
 
 <details>
-<summary><b>Run it in Docker</b></summary>
+<summary><b>Build the Docker image yourself</b></summary>
 
 <br>
 
-The image is set up the way the engine's own image is: its locked environment, its pinned toolchain, and the PDK on
-a volume that is registered when the container starts.
-
 ```sh
-git submodule update --init --recursive
+git clone --recurse-submodules https://github.com/Team-RocketEDA/RocketIDE.git
+cd RocketIDE
 docker build -t rocketide .
-scripts/fetch-pdk.sh     # the open-source sky130A, into ~/.local/share/pdk/sky130A
-docker run --rm -p 127.0.0.1:5173:5173 -e MODEL_API_KEY \
-  -v "$HOME/.local/share/pdk/sky130A:/pdk:ro" \
-  -v rocketide-store:/stores/rocketeda \
-  -v rocketide-projects:/opt/rocketide/projects \
-  rocketide
+docker run --rm -p 127.0.0.1:5173:5173 rocketide
 ```
 
-Then open http://localhost:5173 and add your key in the assistant panel. The container's log prints every model call.
+It's set up the way the engine's own image is: its locked environment and its pinned toolchain. To use your own PDK, add
+`-v /path/to/sky130A:/pdk:ro`.
 </details>
 
 ## How it works
