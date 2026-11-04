@@ -71,4 +71,30 @@ await shot("plots", async () => {
   await post("/api/project/checks/run");
   await open("lesson-1-rc-filter", "plots");
 });
+// The Live build page, while the scripted test model "builds" a counter (see test-model.py).
+await shot("live-start", async () => {
+  await post("/api/project/close");
+  await page.goto("about:blank");
+  await page.goto(base);
+  await page.click(".home-new");
+  await page.fill(".home-dialog textarea", "An 8-bit counter with enable and reset");
+  await page.click(".home-dialog .primary-button");
+  await page.waitForSelector(".composer textarea:not([disabled])", { timeout: 90000 });
+  await page.waitForTimeout(1000);
+});
+// Send the request, then keep approving what the assistant asks to change, and take pictures along the way.
+await page.click(".composer button.send").catch((error) => console.log("FAILED send", String(error).slice(0, 160)));
+const pictures = { 12: "live-counter", 24: "live-top", 36: "live-schematic", 56: "live-done" };
+for (let second = 0; second <= 60; second++) {
+  const approve = page.getByRole("button", { name: "Approve" }).first();
+  if (await approve.isVisible().catch(() => false)) await approve.click().catch(() => undefined);
+  if (pictures[second]) await shot(pictures[second], async () => undefined);
+  await page.waitForTimeout(1000);
+}
+await shot("live-pick-blocks", async () => {
+  await page.locator(".live-step", { hasText: "counter_top" }).first().click();
+  await page.waitForTimeout(800);
+  await page.locator(".block-node").first().click();
+  await page.waitForTimeout(400);
+});
 await browser.close();

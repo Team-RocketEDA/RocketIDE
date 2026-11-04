@@ -98,15 +98,35 @@ them under **Activity**. Keys and prompts are never printed or saved.
 
 ## A look inside
 
-<p align="center">
-  <img src="docs/images/layout.png" alt="Layout viewer showing the routed mac_array GDS: 16,761 instances on 480 by 480 micrometres" width="100%">
-</p>
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/home.png" alt="RocketIDE home screen: recent projects with their pictures, a New project button, and three guided lessons"></td>
+    <td width="50%"><img src="docs/images/diagrams.png" alt="Diagrams page: a block diagram read from the MobileLLM chip's Verilog, above the project's architecture pictures and pages"></td>
+  </tr>
+  <tr>
+    <td valign="top"><b>Home.</b> Your recent projects with their pictures and last results, a new project from a sentence, and lessons for beginners.</td>
+    <td valign="top"><b>Diagrams.</b> A block diagram read from the project's Verilog that you can click through from the top of the chip down, with the pictures and interactive pages it holds. Select blocks to ask the assistant about them.</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/schematic.png" alt="Lesson 1 schematic: an RC filter drawn from its SPICE netlist"></td>
+    <td width="50%"><img src="docs/images/plots.png" alt="Frequency response of the Lesson 1 filter from the engine's ngspice sweep, with its targets and the engine's verdict"></td>
+  </tr>
+  <tr>
+    <td valign="top"><b>Schematic.</b> Drawn from the netlist at this revision.</td>
+    <td valign="top"><b>Plots.</b> Bode plots straight from the engine's own sweep, with the targets from <code>constraints.yaml</code> drawn in and the engine's verdict below.</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/layout.png" alt="Layout viewer showing the routed mac_array GDS: 16,761 instances on 480 by 480 micrometres"></td>
+    <td width="50%"><img src="docs/images/lesson.png" alt="Lesson 1 in the IDE: the checks to pass, and the assistant ready in Learn mode"></td>
+  </tr>
+  <tr>
+    <td valign="top"><b>Layout.</b> The project's GDS, read and drawn in the browser. Find in layout marks what you name on it.</td>
+    <td valign="top"><b>Lessons.</b> Each starts out failing, the student makes the fix, and the simulator decides when they've passed.</td>
+  </tr>
+</table>
 
-The project's GDS, read and drawn in the browser: layers, cells, pan and zoom. Find in layout marks what you name on it.
-
-**Diagrams** shows what the design actually is: a block diagram read directly from the project's Verilog, which you can
-click through from the top of the chip down, plus the pictures and interactive pages the project holds, including any
-the assistant draws.
+**Live build** shows the work as it happens: when the assistant starts, the app draws each file it writes as a diagram,
+schematic or picture, beside a timeline of its steps, with new blocks marked.
 
 ## Demo project
 
