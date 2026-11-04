@@ -23,8 +23,8 @@
 <br>
 
 RocketIDE is a chip-design workbench where you and an AI agent work on the same project at the same time. You describe
-what you want; the agent edits the design, runs real EDA tools and explains the result. You see every change, approve
-what matters, and can do all of it by hand. Whether a check passes is decided by the engine's measurements, never by
+what you want; the agent writes the design, runs real EDA tools and explains the result. You watch it take shape, point
+at what you want changed, and can do all of it by hand. Whether a check passes is decided by the engine's measurements, never by
 what the agent says.
 
 > **Built for the Meta AI Developer Hackathon.** Nothing here existed before the event: every repo in this project was
@@ -61,7 +61,7 @@ starts out failing, the student makes the fix, and the simulator decides when th
     </td>
     <td width="33%" valign="top">
       <h3>Guardrails built in</h3>
-      Protected folders, a repair limit, an allowlist of engine tools and approvals for risky changes, enforced
+      Protected folders, a repair limit, an allowlist of engine tools and targets the agent can't change once set, enforced
       by the harness rather than by the prompt.
     </td>
   </tr>
