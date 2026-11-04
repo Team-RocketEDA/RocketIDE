@@ -3,7 +3,7 @@
 drives the same HTTP API the browser uses. A check whose EDA tool isn't installed is reported as SKIP, not passed.
 
 Usage: scripts/smoke.py [--port 5199] [--agent]
---agent also sends one prompt to the configured model, which needs a working model or key.
+--agent also sends one prompt to Muse Spark, which needs your Meta API key, added in the app or in .env.
 """
 
 import argparse

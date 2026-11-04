@@ -100,8 +100,9 @@ else
     --upstream "${ROCKET_META_UPSTREAM:-https://api.meta.ai}" &
   children+=($!)
   export ROCKET_META_BASE_URL="http://127.0.0.1:$RELAY_PORT/v1"
-  if [[ -z "${MODEL_API_KEY:-}" ]]; then
-    echo "No MODEL_API_KEY in .env: the IDE and engine checks work, but the assistant can't answer."
+  CREDENTIALS="${ROCKET_CREDENTIALS_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/rocketide/credentials}"
+  if [[ -z "${MODEL_API_KEY:-}" && ! -s "$CREDENTIALS" ]]; then
+    echo "No Meta API key yet. Add yours in the app's assistant panel. The IDE and engine checks work without one."
     echo "To see the agent without a key: ./run.sh replay"
   fi
 fi

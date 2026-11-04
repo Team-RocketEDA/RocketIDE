@@ -153,15 +153,17 @@ cd RocketIDE
 ./install.sh            # add --photonic for optical runs, --no-desktop to skip Electron
 ```
 
-**With a Meta Model API key,** add it to `.env` (`install.sh` creates the file from `.env.example`) and start the app:
+Then start the app:
 
 ```sh
-# in .env
-MODEL_API_KEY=your-key
-
 ./run.sh                # http://localhost:5173. The terminal prints every model call
 ./run.sh desktop        # the same, plus the desktop window
 ```
+
+**With a Meta Model API key,** open a project and paste your key into the assistant panel. The app checks it with Meta's
+API and restarts the assistant with it. You can replace or remove it under **Settings**. It's kept in a private file on
+your computer (`~/.config/rocketide/credentials`), outside every project, and never comes back to the browser. You can
+also set `MODEL_API_KEY` in `.env`, but a key saved in the app takes priority.
 
 **Without a key,** you can still see everything:
 
@@ -183,7 +185,6 @@ a volume that is registered when the container starts.
 git submodule update --init --recursive
 docker build -t rocketide .
 scripts/fetch-pdk.sh     # the open-source sky130A, into ~/.local/share/pdk/sky130A
-export MODEL_API_KEY=your-key     # optional: the IDE and engine checks work without it
 docker run --rm -p 127.0.0.1:5173:5173 -e MODEL_API_KEY \
   -v "$HOME/.local/share/pdk/sky130A:/pdk:ro" \
   -v rocketide-store:/stores/rocketeda \
@@ -191,7 +192,7 @@ docker run --rm -p 127.0.0.1:5173:5173 -e MODEL_API_KEY \
   rocketide
 ```
 
-Then open http://localhost:5173. The container's log prints every model call.
+Then open http://localhost:5173 and add your key in the assistant panel. The container's log prints every model call.
 </details>
 
 ## How it works
@@ -257,8 +258,8 @@ RocketIDE is built so that a green check means something.
 - **The harness enforces the rules.** `results/`, `.git/` and the IP manifest are off-limits to the agent's edit tools,
   even through symlinks. Each executed run counts against the repair limit, and edits and runs stop when it's reached.
   Engine tools are an allowlist, so a tool the engine adds later stays hidden until someone reviews it.
-- **Keys stay on the server.** The browser never talks to the engine or the agent directly, so passwords and model
-  keys never reach browser code. The engine and the agent listen on loopback only, the web app binds `127.0.0.1` by
+- **Keys stay on the server.** The browser can save a key but never read one back, and it never talks to the engine or
+  the agent directly, so passwords and model keys never reach browser code. The engine and the agent listen on loopback only, the web app binds `127.0.0.1` by
   default, and all of them refuse requests from other sites.
 
 ## Headless API
@@ -287,7 +288,8 @@ Set these in `.env`; anything already exported wins.
 | Variable | Default | What it does |
 |---|---|---|
 | `ROCKET_MODEL` | `meta/muse-spark-1.3` | The agent's model. Only `meta/...` models run |
-| `MODEL_API_KEY` | empty | Your Meta Model API key |
+| `MODEL_API_KEY` | empty | Your Meta Model API key, if you don't add it in the app |
+| `ROCKET_CREDENTIALS_FILE` | `~/.config/rocketide/credentials` | Where a key added in the app is kept |
 | `PDK_SOURCE` | `~/.local/share/pdk/sky130A` | The PDK the engine registers at install, downloaded if it's missing |
 | `PDK_ID`, `PDK_REVISION` | `sky130A`, the engine's pin | Which PDK that is |
 | `ROCKET_PDK_ROOTS` | empty | PDK folders the agent may read but never edit, separated by `:` |
