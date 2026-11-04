@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Records real Muse Spark sessions into docs/sample-runs/<name>/, so people without a key can see them with
-# ./run.sh replay. Needs MODEL_API_KEY in .env. Each run gets:
+# ./run.sh replay. Needs your Meta API key, added in the app or in .env. Each run gets:
 #
 #   session.jsonl     the agent's full event stream, what ./run.sh replay plays back
 #   meta-calls.jsonl  every Meta Model API call: model the API reported, tokens, timing, request id
@@ -22,7 +22,12 @@ if [[ -f .env ]]; then
 fi
 UPSTREAM="${ROCKET_META_UPSTREAM:-https://api.meta.ai}"
 OUT="${ROCKET_SAMPLE_RUNS_DIR:-$ROOT/docs/sample-runs}"
-[[ -n "${MODEL_API_KEY:-}" ]] || { echo "Set MODEL_API_KEY in .env first." >&2; exit 1; }
+# The key saved in the app, which wins over .env, as it does in the app.
+CREDENTIALS="${ROCKET_CREDENTIALS_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/rocketide/credentials}"
+if SAVED="$(sed -n 's/^MODEL_API_KEY=//p' "$CREDENTIALS" 2>/dev/null)" && [[ -n "$SAVED" ]]; then
+  export MODEL_API_KEY="$SAVED"
+fi
+[[ -n "${MODEL_API_KEY:-}" ]] || { echo "Add your Meta API key in the app first, or set MODEL_API_KEY in .env." >&2; exit 1; }
 export ROCKET_MODEL="${ROCKET_MODEL:-meta/muse-spark-1.3}"
 
 ENGINE="$ROOT/rocket-engine"

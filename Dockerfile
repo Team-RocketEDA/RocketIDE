@@ -13,8 +13,9 @@
 # The PDK is never in the image (sky130A is about 12 GB). Without one at /pdk the container stops, as the engine's
 # does. Another PDK: -e PDK_ID=... -e PDK_REVISION=... (see rocket-engine/scripts/install.sh).
 #
-# Model: Muse Spark, through the Meta Model API. -e MODEL_API_KEY passes your key from the shell, and the container's
-# log prints every call. Without a key the IDE and engine checks still work.
+# Model: Muse Spark, through the Meta Model API. Add your key in the app's assistant panel (it's kept on the store
+# volume), or pass it from the shell with -e MODEL_API_KEY. The container's log prints every call. Without a key the
+# IDE and engine checks still work.
 # Headless API, from inside the container: http://127.0.0.1:8765 (loopback only, no auth).
 FROM ubuntu:24.04
 
@@ -52,8 +53,9 @@ RUN mkdir -p projects /tools /stores/rocketeda /pdk \
     && chown -R rocketeda:rocketeda /opt/rocketide /tools /stores /pdk
 USER rocketeda
 
-# Only Meta models run. Set MODEL_API_KEY at run time.
+# Only Meta models run.
 ENV ROCKET_MODEL=meta/muse-spark-1.3 \
+    ROCKET_CREDENTIALS_FILE=/stores/rocketeda/credentials \
     ROCKET_UI_HOST=0.0.0.0 \
     ROCKET_UI_PORT=5173 \
     ROCKET_PDK_AT_START=1
