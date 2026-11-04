@@ -56,8 +56,15 @@ fi
 
 # In the container the PDK arrives as a volume, so it is registered here, the way the engine's own image does.
 if [[ "${ROCKET_PDK_AT_START:-0}" == 1 ]]; then
+  # None mounted: download the free one, once, onto the store volume.
+  if [[ ! -f "${PDK_SOURCE:-/pdk}/.config/nodeinfo.json" ]]; then
+    echo "No PDK mounted. Downloading the open-source sky130A (about 140 MB). This happens once if you keep the volume."
+    PDK_SOURCE="$("$ROOT/scripts/fetch-pdk.sh" "${ROCKETEDA_HOME:-$HOME}/pdk-download" | tail -1)"
+    PDK_REVISION="${PDK_REVISION:-$(sed -n 's/^REVISION=//p' "$ROOT/scripts/fetch-pdk.sh")}"
+    export PDK_SOURCE PDK_REVISION
+  fi
   "$ENGINE/scripts/install.sh" --pdk-only || {
-    echo "No PDK to register. Mount one at ${PDK_SOURCE:-/pdk}: docker run -v /path/to/sky130A:/pdk:ro ..." >&2
+    echo "Couldn't register the PDK at ${PDK_SOURCE:-/pdk}." >&2
     exit 1
   }
 fi

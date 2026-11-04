@@ -28,6 +28,9 @@ jobs:
   docker:
     name: Docker image
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
     # The image builds the engine's toolchain from source.
     timeout-minutes: 150
     steps:
@@ -59,14 +62,16 @@ jobs:
       - name: Serve the app from the container
         run: |
           # A scripted stand-in for the model, so the screenshots can show the Live build page at work.
+          # No PDK mounted, as for someone trying it for the first time: it downloads its own.
           docker run -d --name rocketide -p 127.0.0.1:5173:5173 \
-            -e MODEL_API_KEY=test-only -e ROCKET_META_UPSTREAM=http://127.0.0.1:8799 \
-            -e PDK_REVISION="$SKY130_REVISION" -v "$RUNNER_TEMP/pdk/sky130A:/pdk:ro" rocketide
+            -e MODEL_API_KEY=test-only -e ROCKET_META_UPSTREAM=http://127.0.0.1:8799 rocketide
           docker exec -d rocketide python3 -I scripts/test-model.py 8799
-          for _ in $(seq 1 120); do
+          for _ in $(seq 1 240); do
             curl -fsS http://localhost:5173/api/status && break
+            docker inspect -f '{{.State.Running}}' rocketide | grep -q true || { docker logs rocketide | tail -30; exit 1; }
             sleep 2
           done
+          docker logs rocketide | grep -q "Downloading the open-source sky130A"
           curl -fsS http://localhost:5173/ | grep 'id="root"'
           curl -fsS http://localhost:5173/api/projects | grep albert-chip-demo
       - name: Screenshots of the app
@@ -83,6 +88,14 @@ jobs:
         with:
           name: screens
           path: screens
+      - name: Publish the image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker tag rocketide ghcr.io/team-rocketeda/rocketide:latest
+          docker tag rocketide "ghcr.io/team-rocketeda/rocketide:${GITHUB_SHA::7}"
+          docker push ghcr.io/team-rocketeda/rocketide:latest
+          docker push "ghcr.io/team-rocketeda/rocketide:${GITHUB_SHA::7}"
       - name: Container logs
         if: failure()
         run: docker logs rocketide || true
