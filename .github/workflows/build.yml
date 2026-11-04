@@ -131,6 +131,43 @@ jobs:
             desktop.png
             desktop.log
 
+  agent:
+    name: Agent guardrails and UI tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v5
+      - uses: oven-sh/setup-bun@v2
+      - name: Install the agent
+        working-directory: rocket_fuel
+        run: |
+          npm ci --no-audit --no-fund
+          (cd mcp-stub && uv sync --locked --no-dev)
+      - name: Scripted scenarios, including what the tutor and reviewer can't do
+        working-directory: rocket_fuel
+        run: python3 -I evals/run_scenarios.py
+      - name: Plugin and client tests
+        working-directory: rocket_fuel
+        run: |
+          python3 -I scripts/meta_relay_test.py
+          (cd plugin && bun install --frozen-lockfile && bun test)
+          (cd client && bun install --frozen-lockfile && bun test)
+      - name: UI tests and types
+        working-directory: UIUX
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+        run: |
+          npm ci --no-audit --no-fund --ignore-scripts
+          npx tsc -b --noEmit
+          npm test
+
   demos:
     name: MobileLLM checks
     runs-on: ubuntu-24.04
@@ -153,7 +190,7 @@ jobs:
   release:
     name: Publish release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [docker, desktop, demos]
+    needs: [docker, desktop, agent, demos]
     runs-on: ubuntu-24.04
     timeout-minutes: 150
     permissions:

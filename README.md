@@ -42,6 +42,9 @@ setup and slow feedback. RocketIDE runs on free, open-source tools and a free PD
 paper, get a working design, and learn from a tutor that teaches from their own circuit. Every result comes from a real
 simulator, so what they learn is true.
 
+New to it? The start screen offers three guided lessons: your first filter, your first amplifier, and a real op-amp. Each
+starts out failing, the student makes the fix, and the simulator decides when they've passed.
+
 ## Why RocketIDE
 
 <table>
@@ -90,7 +93,8 @@ with the model name taken from the API's own response:
 [Meta Model API] 10:41:05  <- 200  model=muse-spark-1.3  tokens in 4210 / out 312  2.14 s  id=req_...
 ```
 
-The same facts go to `logs/meta-calls.jsonl`. Keys and prompts are never printed or saved.
+The same facts go to `logs/meta-calls.jsonl`, and the app shows them too: the last call above the message box, and all of
+them under **Activity**. Keys and prompts are never printed or saved.
 
 ## A look inside
 
@@ -106,7 +110,7 @@ The project's GDS, read and drawn in the browser: layers, cells, pan and zoom. F
 placed and routed. It opens as its own project, and Run checks runs the Icarus `mac_unit` self-checking testbench through
 the engine.
 
-You can also start a new project from the op-amp template, a two-stage amplifier on generic models that needs no
+You can also start one of the three lessons, or a new project from the op-amp template, a two-stage amplifier on generic models that needs no
 foundry PDK.
 
 ## Quick start
@@ -133,6 +137,7 @@ Then start the app:
 ```sh
 ./run.sh                # http://localhost:5173. The terminal prints every model call
 ./run.sh desktop        # the same, plus the desktop window
+./run.sh --fresh        # start clean: asks first, then deletes all projects and assistant chats
 ```
 
 **With a Meta Model API key,** open a project and paste your key into the assistant panel. The app checks it with Meta's
@@ -277,7 +282,7 @@ Set these in `.env`; anything already exported wins.
 
 | Check | Needs |
 |---|---|
-| Op-amp template, and circuits from a sketch | `ngspice` |
+| Lessons, op-amp template, and circuits from a sketch | `ngspice` |
 | MobileLLM `mac_unit` testbench | `iverilog` |
 | sky130A DRC, LVS and PDK simulation | The PDK registered at install (`/pdk` in Docker) |
 
@@ -329,7 +334,8 @@ animations (SVG, WebM and animated PNG), plus the colours, type and rules for us
 reads the plot data, and confirms the engine's APIs and the shared engine. `--agent` also sends a prompt to Muse Spark,
 which needs `MODEL_API_KEY`, and confirms it reached the engine. A check whose tool isn't installed reports SKIP, never a pass.
 
-`.github/workflows/build.yml` builds the Docker image and the desktop app on a clean machine, and runs the demo's checks. Pushing a `v*` tag publishes a release with the archive from `./install.sh --package`, once those jobs pass.
+`.github/workflows/build.yml` builds the Docker image and the desktop app on a clean machine. It also runs the demo's
+checks and the agent's guardrail scenarios, including what the tutor and the reviewer aren't allowed to do. Pushing a `v*` tag publishes a release with the archive from `./install.sh --package`, once those jobs pass.
 
 <br>
 

@@ -4,6 +4,7 @@
 #   ./run.sh            the engine and the web app, http://localhost:5173
 #   ./run.sh desktop    the engine, the web app and the desktop window, all at once
 #   ./run.sh replay     no key needed: the assistant replays a real recorded Muse Spark session (docs/sample-runs)
+#   ./run.sh --fresh    start clean: asks first, then deletes every project and all assistant chats, and restores the demo
 #
 # The agent for whichever project is open attaches to the same engine over MCP. Headless clients use it too, at
 # http://127.0.0.1:8765 (ROCKET_ENGINE_PORT): POST /projects/<name>/call, or the engine's own HTTP API at
@@ -16,10 +17,12 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODE=web
+FRESH=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     web|desktop|replay) MODE="$1" ;;
-    -h|--help) sed -n 2,14p "$0" | cut -c3-; exit 0 ;;
+    --fresh) FRESH=1 ;;
+    -h|--help) sed -n 2,15p "$0" | cut -c3-; exit 0 ;;
     *) echo "Unknown option: $1 (try --help)" >&2; exit 2 ;;
   esac
   shift
@@ -59,6 +62,12 @@ if [[ "${ROCKET_PDK_AT_START:-0}" == 1 ]]; then
   }
 fi
 
+if [[ "$FRESH" == 1 ]]; then
+  [[ -t 0 ]] || { echo "--fresh deletes your projects, so it has to be run in a terminal." >&2; exit 2; }
+  read -r -p "This deletes everything in $ROCKET_PROJECTS_DIR and all assistant chats. Type yes to go on: " answer
+  [[ "$answer" == yes ]] || { echo "Nothing was deleted." >&2; exit 1; }
+  rm -rf "$ROOT/rocket_fuel/.opencode-home" "${ROCKET_PROJECTS_DIR:?}"/*
+fi
 "$ROOT/scripts/seed-projects.sh" >/dev/null
 
 children=()
@@ -100,6 +109,8 @@ else
     --upstream "${ROCKET_META_UPSTREAM:-https://api.meta.ai}" &
   children+=($!)
   export ROCKET_META_BASE_URL="http://127.0.0.1:$RELAY_PORT/v1"
+  # The same log feeds the app's list of model calls.
+  export ROCKET_META_CALL_LOG="$ROOT/logs/meta-calls.jsonl"
   CREDENTIALS="${ROCKET_CREDENTIALS_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/rocketide/credentials}"
   if [[ -z "${MODEL_API_KEY:-}" && ! -s "$CREDENTIALS" ]]; then
     echo "No Meta API key yet. Add yours in the app's assistant panel. The IDE and engine checks work without one."

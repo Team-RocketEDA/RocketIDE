@@ -110,6 +110,34 @@ def expect_opamp(verdict):
         return f"expected FAIL at 55.73 dB, got {verdict.get('status')} {gain}"
 
 
+def expect_measured(metric, value, tolerance, status):
+    """What a lesson's checks should report: the simulator's number, and the verdict from it."""
+    def expect(verdict):
+        got = measured(verdict).get(metric)
+        if verdict.get("status") != status or got is None or abs(got - value) > tolerance:
+            return f"expected {status} at {metric}={value}, got {verdict.get('status')} {got}"
+    return expect
+
+
+def check_lesson(api, lesson, start, file, old, new, solved):
+    """A lesson starts out failing, and the change it teaches makes it pass, all on the real engine."""
+    status, _ = api.json("POST", "/api/projects", {"name": lesson, "template": lesson})
+    check(f"{lesson}: can be started", status == 201, f"HTTP {status}")
+    if not run_checks(api, lesson, start):
+        return
+    _, project = api.json("GET", "/api/project")
+    check(f"{lesson}: opens as a lesson", (project or {}).get("lesson") is True)
+    status, content = api.json("GET", f"/api/project/file?path={file}")
+    text = (content or {}).get("content", "")
+    check(f"{lesson}: has the value to change", old in text, old)
+    status, _ = api.json("PUT", "/api/project/file", {"path": file, "content": text.replace(old, new)})
+    check(f"{lesson}: the change saves", status == 200, f"HTTP {status}")
+    status, result = api.json("POST", "/api/project/checks/run")
+    verdict = (result or {}).get("verdict") or {}
+    problem = solved(verdict)
+    check(f"{lesson}: the change makes it pass", problem is None, problem or verdict.get("status", ""))
+
+
 def expect_pass(verdict):
     if verdict.get("status") != "PASS":
         return f"expected PASS, got {verdict.get('status')}: {str(verdict.get('reason'))[:120]}"
@@ -190,6 +218,12 @@ def main():
                   and mcp.get("url") == f"{engine}/projects/smoke-opamp/mcp", json.dumps(mcp)[:120])
 
         run_checks(api, "albert-chip-demo", expect_pass)
+        check_lesson(api, "lesson-1-rc-filter", expect_measured("corner_low_khz", 0.159, 0.01, "FAIL"),
+                     "design/rc_filter.cir", ".param R1=10k", ".param R1=1k",
+                     expect_measured("corner_low_khz", 1.59, 0.05, "PASS"))
+        check_lesson(api, "lesson-2-amplifier", expect_measured("gain_db", 6.09, 0.2, "FAIL"),
+                     "design/amplifier.cir", ".param RL=5k", ".param RL=30k",
+                     expect_measured("gain_db", 21.05, 0.2, "PASS"))
         api.json("POST", "/api/project/close")
 
         # The IDE's Run checks went to the engine run.sh started, so that engine remembers them.
