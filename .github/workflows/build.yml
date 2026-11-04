@@ -66,6 +66,20 @@ jobs:
           done
           curl -fsS http://localhost:5173/ | grep 'id="root"'
           curl -fsS http://localhost:5173/api/projects | grep albert-chip-demo
+      - name: Screenshots of the app
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/shots" && cd "$RUNNER_TEMP/shots"
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright@1.49.1 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          cp "$GITHUB_WORKSPACE/scripts/screenshots.mjs" .
+          node screenshots.mjs http://localhost:5173 "$GITHUB_WORKSPACE/screens"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screens
+          path: screens
       - name: Container logs
         if: failure()
         run: docker logs rocketide || true
@@ -177,12 +191,8 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
-      - name: Install system packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends iverilog
-      # Not src/scripts/elab.sh: elaborating the whole chip at once outlasts this job's time limit. The Docker job
-      # runs the mac_unit testbench through the engine.
+      # Without iverilog on purpose: when it's installed, these tests and src/scripts/elab.sh elaborate the whole chip,
+      # which outlasts this job's time limit. The Docker job runs the mac_unit testbench through the engine.
       - name: MobileLLM contract tests
         working-directory: Demos/albert-chip-demo
         run: python3 -m unittest discover -s architecture/tests
