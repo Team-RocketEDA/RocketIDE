@@ -11,7 +11,8 @@
 #
 # The engine is installed by its own scripts/install.sh, unchanged: its Python environment, the PDK it registers
 # from PDK_SOURCE (default ~/.local/share/pdk/sky130A; it stops without one), and its pinned toolchain from
-# scripts/provision_toolchain.sh --install. PDK_SOURCE, PDK_ID and PDK_REVISION can go in .env.
+# scripts/provision_toolchain.sh --install. PDK_SOURCE, PDK_ID and PDK_REVISION can go in .env. With no PDK_SOURCE
+# and none at the default, scripts/fetch-pdk.sh downloads the open-source sky130A (about 140 MB, no account).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -26,7 +27,7 @@ while [[ $# -gt 0 ]]; do
     --check) CHECK=1 ;;
     --package) PACKAGE=1 ;;
     --release) PACKAGE=1; TAG="${2:?--release needs a tag}"; shift ;;
-    -h|--help) sed -n 2,14p "$0" | cut -c3-; exit 0 ;;
+    -h|--help) sed -n 2,15p "$0" | cut -c3-; exit 0 ;;
     *) echo "Unknown option: $1 (try --help)" >&2; exit 2 ;;
   esac
   shift
@@ -73,6 +74,12 @@ if [[ "$CONTAINER" == 1 ]]; then
   (cd rocket-engine && bash scripts/provision_toolchain.sh --install) \
     || echo "Toolchain degraded (see the REMEDY lines above); the engine reports missing tools as NOT_RUN."
 else
+  if [[ -z "${PDK_SOURCE:-}" && ! -f "$HOME/.local/share/pdk/sky130A/.config/nodeinfo.json" ]]; then
+    step "PDK"
+    PDK_SOURCE="$(scripts/fetch-pdk.sh | tail -1)"
+    PDK_REVISION="${PDK_REVISION:-$(sed -n 's/^REVISION=//p' scripts/fetch-pdk.sh)}"
+    export PDK_SOURCE PDK_REVISION
+  fi
   rocket-engine/scripts/install.sh --install
 fi
 if [[ "$PHOTONIC" == 1 ]]; then

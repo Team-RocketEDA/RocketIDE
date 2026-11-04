@@ -1,7 +1,7 @@
 # Builds and tests the whole bundle on a clean machine. A v* tag also publishes a release.
 #
-# The submodules are other repos, which the default token can't read, so this needs a SUBMODULES_TOKEN secret:
-# a token with read access to the contents of rocket-engine, rocket_fuel, UIUX and the three demo repos.
+# The submodules are public repos, which the default token can read. A SUBMODULES_TOKEN secret overrides it, for a
+# fork whose submodules are private.
 #
 # The engine's installer registers a PDK and stops without one. CI uses a prebuilt sky130A from ciel-releases,
 # only the parts the demos use (common, primitives, HD cells), and tells the engine its revision.
@@ -34,7 +34,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          token: ${{ secrets.SUBMODULES_TOKEN }}
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
       - name: sky130A (cached)
         id: pdk-cache
         uses: actions/cache@v4
@@ -79,7 +79,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          token: ${{ secrets.SUBMODULES_TOKEN }}
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
       - name: sky130A (cached)
         id: pdk-cache
         uses: actions/cache@v4
@@ -139,7 +139,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          token: ${{ secrets.SUBMODULES_TOKEN }}
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
       - uses: astral-sh/setup-uv@v5
       - name: Install the engine with its photonic groups
         working-directory: rocket-engine
@@ -167,7 +167,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          token: ${{ secrets.SUBMODULES_TOKEN }}
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
       - name: Install system packages
         run: |
           sudo apt-get update
@@ -193,7 +193,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          token: ${{ secrets.SUBMODULES_TOKEN }}
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
           fetch-depth: 0
       - name: sky130A (cached)
         id: pdk-cache

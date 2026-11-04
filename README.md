@@ -3,7 +3,8 @@
 </p>
 
 <p align="center">
-  <img alt="Ubuntu 24.04" src="https://img.shields.io/badge/Ubuntu-24.04-ee6a4c?style=flat-square&logo=ubuntu&logoColor=white">
+  <img alt="Runs on Muse Spark" src="https://img.shields.io/badge/Runs%20on-Muse%20Spark-ee6a4c?style=flat-square&logo=meta&logoColor=white">
+  <img alt="Ubuntu 24.04" src="https://img.shields.io/badge/Ubuntu-24.04-34312e?style=flat-square&logo=ubuntu&logoColor=white">
   <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-34312e?style=flat-square&logo=python&logoColor=white">
   <img alt="Node 22" src="https://img.shields.io/badge/Node-22-34312e?style=flat-square&logo=nodedotjs&logoColor=white">
   <img alt="Model Context Protocol" src="https://img.shields.io/badge/MCP-agent%20tools-34312e?style=flat-square">
@@ -12,6 +13,7 @@
 
 <p align="center">
   <a href="#quick-start"><b>Quick start</b></a> ·
+  <a href="#muse-spark"><b>Muse Spark</b></a> ·
   <a href="#how-it-works"><b>How it works</b></a> ·
   <a href="#demo-projects"><b>Demos</b></a> ·
   <a href="#honest-by-design"><b>Honest by design</b></a> ·
@@ -24,6 +26,10 @@ RocketIDE is a chip-design workbench where you and an AI agent work on the same 
 what you want; the agent edits the design, runs real EDA tools and explains the result. You see every change, approve
 what matters, and can do all of it by hand. Whether a check passes is decided by the engine's measurements, never by
 what the agent says.
+
+> **Built for the Meta AI Developer Hackathon.** Nothing here existed before the event: every repo in this project was
+> created and written between Oct 26 and Nov 4, 2026. We build on open-source tools, used as they are: opencode (the
+> agent runtime), ngspice, Icarus Verilog, SAX, Magic, KLayout, LibreLane and the sky130A PDK.
 
 <p align="center">
   <img src="docs/images/overview.png" alt="RocketIDE on the MobileLLM decoder project: all checks pass, recent engine runs, and the assistant ready beside the workbench" width="100%">
@@ -50,6 +56,22 @@ what the agent says.
     </td>
   </tr>
 </table>
+
+## Muse Spark
+
+The agent runs on **Muse Spark 1.3** through the Meta Model API. It reads the project, plans a change, edits the design,
+calls the engine's tools, reads the measurements and repairs what failed. It's the only kind of model RocketIDE calls:
+Rocket Fuel's config enables no provider except Meta's, and refuses to start with any other model.
+
+**Every call is visible.** `./run.sh` sends the agent's calls through a small relay that prints each one in the terminal,
+with the model name taken from the API's own response:
+
+```text
+[Meta Model API] 10:41:03  -> POST /v1/chat/completions  model=muse-spark-1.3  stream
+[Meta Model API] 10:41:05  <- 200  model=muse-spark-1.3  tokens in 4210 / out 312  2.14 s  id=req_...
+```
+
+The same facts go to `logs/meta-calls.jsonl`. Keys and prompts are never printed or saved.
 
 ## A look inside
 
@@ -95,16 +117,40 @@ foundry PDK.
 
 ## Quick start
 
-**You need** `git`, Node 20.12 or newer, [`uv`](https://docs.astral.sh/uv/), and a PDK for the engine to register:
-sky130A at `~/.local/share/pdk/sky130A`, or point `PDK_SOURCE` at one. The engine's provisioner installs the EDA tools.
+**You need** `git`, Node 20.12 or newer, [`uv`](https://docs.astral.sh/uv/), `zstd`, and the build tools the engine's
+provisioner uses to install the EDA tools. On Ubuntu 24.04:
+
+```sh
+sudo apt-get install -y curl git zstd python3 python3-venv make cmake gcc g++ gfortran bison flex swig \
+  tcl tcl-dev tk tk-dev libx11-dev bzip2 xz-utils unzip
+```
+
+No account is needed to install or run any of it. `install.sh` downloads the open-source sky130A PDK (about 140 MB) if
+you don't have one.
 
 ```sh
 git clone --recurse-submodules https://github.com/Team-RocketEDA/RocketIDE.git
 cd RocketIDE
 ./install.sh            # add --photonic for optical runs, --no-desktop to skip Electron
-./run.sh                # http://localhost:5173
+```
+
+**With a Meta Model API key,** add it to `.env` (`install.sh` creates the file from `.env.example`) and start the app:
+
+```sh
+# in .env
+MODEL_API_KEY=your-key
+
+./run.sh                # http://localhost:5173. The terminal prints every model call
 ./run.sh desktop        # the same, plus the desktop window
 ```
+
+**Without a key,** you can still see everything:
+
+- **The IDE and the engine** work as usual with `./run.sh`: open a demo, press Run checks, read the plots and the
+  layout. Only the assistant needs a key.
+- **The agent** is in [`docs/sample-runs/`](docs/sample-runs/): real Muse Spark sessions, each with its full event
+  stream, the log of every model call, and what the engine produced. `./run.sh replay` plays one back in the
+  assistant panel, marked REPLAY, without calling any model.
 
 <details>
 <summary><b>Run it in Docker</b></summary>
@@ -117,24 +163,16 @@ a volume that is registered when the container starts.
 ```sh
 git submodule update --init --recursive
 docker build -t rocketide .
-docker run --rm -p 127.0.0.1:5173:5173 \
-  -v /path/to/sky130A:/pdk:ro \
+scripts/fetch-pdk.sh     # the open-source sky130A, into ~/.local/share/pdk/sky130A
+export MODEL_API_KEY=your-key     # optional: the IDE and engine checks work without it
+docker run --rm -p 127.0.0.1:5173:5173 -e MODEL_API_KEY \
+  -v "$HOME/.local/share/pdk/sky130A:/pdk:ro" \
   -v rocketide-store:/stores/rocketeda \
   -v rocketide-projects:/opt/rocketide/projects \
   rocketide
 ```
 
-Then open http://localhost:5173.
-</details>
-
-<details>
-<summary><b>Choose the model</b></summary>
-
-<br>
-
-`install.sh` writes `.env`. The default is a free model that needs no key and shares one quota per machine. For Muse
-Spark, set `ROCKET_MODEL=meta/muse-spark-1.3` and `MODEL_API_KEY`. Other providers read their usual variable, such as
-`OPENROUTER_API_KEY` or `ANTHROPIC_API_KEY`.
+Then open http://localhost:5173. The container's log prints every model call.
 </details>
 
 ## How it works
@@ -148,6 +186,8 @@ flowchart LR
   end
   UI["UI server<br/>UIUX/server"]
   A["Agent<br/>opencode + Rocket Fuel"]
+  R["Call log<br/>meta-relay.py"]
+  M["Meta Model API<br/>Muse Spark"]
   E[("Rocket Engine<br/>one per project")]
   T["EDA tools<br/>ngspice · Icarus · SAX<br/>Magic · KLayout · LibreLane"]
   P[("projects/<br/>one git repo each")]
@@ -157,6 +197,7 @@ flowchart LR
   UI -- "starts and proxies" --> A
   UI -- "Run checks" --> E
   A -- "MCP over HTTP" --> E
+  A --> R --> M
   S -- "/call · /api" --> E
   E --> T
   UI --- P
@@ -169,7 +210,8 @@ Setup follows the engine team's own flow, with the engine unchanged:
    environment, registers the PDK, and installs its pinned toolchain through `provision_toolchain.sh --install`.
 2. **Point at the tools.** `run.sh` puts the provisioned tools on `PATH` with `provision_toolchain.sh --print-path`.
 3. **Launch the engine.** `run.sh` starts one engine, `scripts/engine-host.py`, on `127.0.0.1:8765`.
-4. **Connect every client.** The web app, the desktop window and the agent all use that engine.
+4. **Connect every client.** The web app, the desktop window and the agent all use that engine. The agent's model
+   calls go through the relay that logs them.
 
 The engine host serves the engine's own MCP handlers, so argument checks, targets from `constraints.yaml`, source
 confinement and evidence files are exactly what the engine itself does. Calls into one project take turns.
@@ -224,14 +266,15 @@ Set these in `.env`; anything already exported wins.
 
 | Variable | Default | What it does |
 |---|---|---|
-| `ROCKET_MODEL` | `opencode/beam-free` | The agent's model |
-| `MODEL_API_KEY` | empty | The key for a model that needs one |
-| `PDK_SOURCE` | `~/.local/share/pdk/sky130A` | The PDK the engine registers at install |
+| `ROCKET_MODEL` | `meta/muse-spark-1.3` | The agent's model. Only `meta/...` models run |
+| `MODEL_API_KEY` | empty | Your Meta Model API key |
+| `PDK_SOURCE` | `~/.local/share/pdk/sky130A` | The PDK the engine registers at install, downloaded if it's missing |
 | `PDK_ID`, `PDK_REVISION` | `sky130A`, the engine's pin | Which PDK that is |
 | `ROCKET_PDK_ROOTS` | empty | PDK folders the agent may read but never edit, separated by `:` |
 | `ROCKET_PROJECTS_DIR` | `./projects` | Where projects live |
 | `ROCKET_UI_HOST`, `ROCKET_UI_PORT` | `127.0.0.1`, `5173` | The web app's address |
 | `ROCKET_ENGINE_PORT` | `8765` | The shared engine, loopback only |
+| `ROCKET_META_RELAY_PORT` | `8766` | The relay that logs every model call, loopback only |
 
 ## What runs where
 
@@ -250,12 +293,15 @@ flows that need more.
 ```text
 RocketIDE/
 ├── install.sh                 builds everything: engine, toolchain, agent, UI, demo projects
-├── run.sh                     tool paths, then one engine, then the web app, desktop window and agent
+├── run.sh                     tool paths, one engine, the model call log, then the web app, desktop window and agent
 ├── Dockerfile                 the whole IDE in one Ubuntu 24.04 container
 ├── scripts/
 │   ├── engine-host.py         the shared engine: IDE, agent (MCP) and headless clients
 │   ├── seed-projects.sh       copies each demo into projects/ as its own git repo
+│   ├── fetch-pdk.sh           downloads the open-source sky130A
+│   ├── record-sample-runs.sh  records real Muse Spark sessions into docs/sample-runs/
 │   └── smoke.py               end-to-end test of the assembled IDE
+├── docs/sample-runs/          recorded Muse Spark sessions, with their call logs and outputs
 ├── integration/overlays/      what each demo needs to open in the IDE (its constraints.yaml)
 ├── rocket-engine/  rocket_fuel/  UIUX/      the three parts, as submodules
 └── Demos/                     the three demo projects, as submodules
@@ -284,12 +330,11 @@ animations (SVG, WebM and animated PNG), plus the colours, type and rules for us
 ## Testing and releases
 
 `scripts/smoke.py` starts the assembled IDE and drives it the way a person would: it opens each demo, runs its checks,
-reads the plot data, and confirms the engine's APIs and the shared engine. `--agent` also sends a prompt to the model
-and confirms it reached the engine. A check whose tool isn't installed reports SKIP, never a pass.
+reads the plot data, and confirms the engine's APIs and the shared engine. `--agent` also sends a prompt to Muse Spark,
+which needs `MODEL_API_KEY`, and confirms it reached the engine. A check whose tool isn't installed reports SKIP, never a pass.
 
 `.github/workflows/build.yml` builds the Docker image and the desktop app on a clean machine, and runs the photonic and
-demo checks. It needs a `SUBMODULES_TOKEN` secret with read access to the submodule repos. Pushing a `v*` tag publishes
-a release with the archive from `./install.sh --package`, once those jobs pass.
+demo checks. Pushing a `v*` tag publishes a release with the archive from `./install.sh --package`, once those jobs pass.
 
 <br>
 
