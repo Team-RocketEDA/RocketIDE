@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 64 64" role="img"><title>RocketIDE</title><style>
+.rocket{animation:float 2.6s ease-in-out infinite}
+.flame{transform-box:fill-box;transform-origin:50% 0;animation:flicker .16s ease-in-out infinite alternate}
+@keyframes float{50%{transform:translateY(-2.5px)}}
+@keyframes flicker{from{transform:scaleY(1);opacity:1}to{transform:scaleY(.7);opacity:.78}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style><g class="tile"><rect width="64" height="64" rx="15" fill="#ee6a4c"/></g>
+<clipPath id="tileclip"><rect width="64" height="64" rx="15"/></clipPath>
+<g clip-path="url(#tileclip)"><g class="rocket">
+  <g class="flame"><path d="M27.6 49h8.8L32 57.5z" fill="#ffd3c6"/></g>
+  <path d="M22.8 36.5 15.5 45v5.2l7.3-3.2zM41.2 36.5 48.5 45v5.2l-7.3-3.2z" fill="#ffffff"/>
+  <path d="M32 8.5c6.4 5.2 9.2 12.6 9.2 21.6V46H22.8V30.1c0-9 2.8-16.4 9.2-21.6z" fill="#ffffff"/>
+  <circle class="window" cx="32" cy="27" r="4.3" fill="#ee6a4c"/>
+  <g stroke="#ffffff" stroke-width="2.6" stroke-linecap="round">
+    <path class="pin p1" d="M17.8 23.5h5"/><path class="pin p2" d="M41.2 23.5h5"/>
+    <path class="pin p3" d="M17.8 30h5"/><path class="pin p4" d="M41.2 30h5"/>
+  </g>
+</g></g></svg>

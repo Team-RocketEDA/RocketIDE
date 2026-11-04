@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/banner.svg" alt="RocketIDE: design chips with an AI agent beside you. Every PASS comes from a real EDA tool." width="100%">
+  <img src="docs/brand/animations/banner-animated.svg" alt="RocketIDE: design chips with an AI agent beside you. Every PASS comes from a real EDA tool." width="100%">
 </p>
 
 <p align="center">
@@ -69,6 +69,14 @@ what the agent says.
   <tr>
     <td valign="top"><b>Verification.</b> Every check with its target, measured value, margin, source revision and the run that produced it.</td>
     <td valign="top"><b>Schematic.</b> Drawn from the netlists at this revision, with hierarchy, symbols and nets.</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/picker.png" alt="Start screen with the RocketIDE logo: create a project from a template or open one of the three demos"></td>
+    <td width="50%"><img src="docs/images/constraints.png" alt="Constraints page: PDK, domains, approval mode, repair limit and each check's target"></td>
+  </tr>
+  <tr>
+    <td valign="top"><b>Start screen.</b> Create a project from a template or open a demo. The engine's tools are listed with what's installed.</td>
+    <td valign="top"><b>Constraints.</b> The targets the engine grades against, the approval mode and the repair limit, saved to <code>constraints.yaml</code> as a commit.</td>
   </tr>
 </table>
 
@@ -262,6 +270,16 @@ To move a part to the latest commit of its branch:
 ```sh
 git submodule update --remote rocket-engine && git add rocket-engine && scripts/smoke.py
 ```
+
+## Brand
+
+<img src="docs/brand/logo.svg" width="48" height="48" align="left" alt="RocketIDE logo">
+
+The mark is **Launch Chip**: a rocket whose body carries a chip's pins. [`docs/brand/`](docs/brand/README.md) has it
+as SVG and PNG at every size from 16 to 1024 px, with the name, as a favicon and a social preview, and as launch and loop
+animations (SVG, WebM and animated PNG), plus the colours, type and rules for using it.
+
+<br clear="left">
 
 ## Testing and releases
 

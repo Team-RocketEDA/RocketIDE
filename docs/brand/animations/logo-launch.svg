@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 64 64" role="img"><title>RocketIDE</title><style>
+.tile{transform-box:fill-box;transform-origin:center;animation:tile-in .5s cubic-bezier(.2,.9,.3,1.25) both}
+.rocket{animation:rise 1s .2s cubic-bezier(.2,.85,.25,1.15) both}
+.flame{transform-box:fill-box;transform-origin:50% 0;animation:ignite .9s .2s ease-out both,flicker .16s 1.15s ease-in-out infinite alternate}
+.window{transform-box:fill-box;transform-origin:center;animation:pop .35s 1.05s cubic-bezier(.3,1.6,.5,1) both}
+.pin{stroke-dasharray:5;animation:trace .3s ease-out both}
+.p1{animation-delay:1s}.p2{animation-delay:1.08s}.p3{animation-delay:1.16s}.p4{animation-delay:1.24s}
+@keyframes tile-in{from{opacity:0;transform:scale(.55)}}
+@keyframes rise{from{transform:translateY(30px)}}
+@keyframes ignite{0%{transform:scaleY(0)}55%{transform:scaleY(1.6)}100%{transform:scaleY(1)}}
+@keyframes flicker{from{transform:scaleY(1);opacity:1}to{transform:scaleY(.72);opacity:.8}}
+@keyframes pop{from{transform:scale(0)}}
+@keyframes trace{from{stroke-dashoffset:5}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style><g class="tile"><rect width="64" height="64" rx="15" fill="#ee6a4c"/></g>
+<clipPath id="tileclip"><rect width="64" height="64" rx="15"/></clipPath>
+<g clip-path="url(#tileclip)"><g class="rocket">
+  <g class="flame"><path d="M27.6 49h8.8L32 57.5z" fill="#ffd3c6"/></g>
+  <path d="M22.8 36.5 15.5 45v5.2l7.3-3.2zM41.2 36.5 48.5 45v5.2l-7.3-3.2z" fill="#ffffff"/>
+  <path d="M32 8.5c6.4 5.2 9.2 12.6 9.2 21.6V46H22.8V30.1c0-9 2.8-16.4 9.2-21.6z" fill="#ffffff"/>
+  <circle class="window" cx="32" cy="27" r="4.3" fill="#ee6a4c"/>
+  <g stroke="#ffffff" stroke-width="2.6" stroke-linecap="round">
+    <path class="pin p1" d="M17.8 23.5h5"/><path class="pin p2" d="M41.2 23.5h5"/>
+    <path class="pin p3" d="M17.8 30h5"/><path class="pin p4" d="M41.2 30h5"/>
+  </g>
+</g></g></svg>
