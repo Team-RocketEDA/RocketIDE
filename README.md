@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Runs on Muse Spark" src="https://img.shields.io/badge/Runs%20on-Muse%20Spark-ee6a4c?style=flat-square&logo=meta&logoColor=white">
+  <img alt="Runs on Muse Spark, Muse Wonder and SAM 3.1" src="https://img.shields.io/badge/Runs%20on-Muse%20Spark%20·%20Muse%20Wonder%20·%20SAM%203.1-ee6a4c?style=flat-square&logo=meta&logoColor=white">
   <img alt="Ubuntu 24.04" src="https://img.shields.io/badge/Ubuntu-24.04-34312e?style=flat-square&logo=ubuntu&logoColor=white">
   <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-34312e?style=flat-square&logo=python&logoColor=white">
   <img alt="Node 22" src="https://img.shields.io/badge/Node-22-34312e?style=flat-square&logo=nodedotjs&logoColor=white">
@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="#quick-start"><b>Quick start</b></a> ·
-  <a href="#muse-spark"><b>Muse Spark</b></a> ·
+  <a href="#muse-models"><b>Muse models</b></a> ·
   <a href="#how-it-works"><b>How it works</b></a> ·
   <a href="#demo-projects"><b>Demos</b></a> ·
   <a href="#honest-by-design"><b>Honest by design</b></a> ·
@@ -34,6 +34,13 @@ what the agent says.
 <p align="center">
   <img src="docs/images/overview.png" alt="RocketIDE on the MobileLLM decoder project: all checks pass, recent engine runs, and the assistant ready beside the workbench" width="100%">
 </p>
+
+## Who it's for
+
+Students who want to learn chip design by building one. Learning it usually means costly professional tools, a hard
+setup and slow feedback. RocketIDE runs on free, open-source tools and a free PDK. A student can start from a sketch on
+paper, get a working design, and learn from a tutor that teaches from their own circuit. Every result comes from a real
+simulator, so what they learn is true.
 
 ## Why RocketIDE
 
@@ -57,13 +64,25 @@ what the agent says.
   </tr>
 </table>
 
-## Muse Spark
+## Muse models
 
-The agent runs on **Muse Spark 1.3** through the Meta Model API. It reads the project, plans a change, edits the design,
-calls the engine's tools, reads the measurements and repairs what failed. It's the only kind of model RocketIDE calls:
-Rocket Fuel's config enables no provider except Meta's, and refuses to start with any other model.
+Each Meta model does the job it's best at, and none of them decides whether a design passes. That's always the engine.
 
-**Every call is visible.** `./run.sh` sends the agent's calls through a small relay that prints each one in the terminal,
+| Model | What it does here | Where to find it |
+|---|---|---|
+| **Muse Spark 1.3** | Runs the design agent: reads the project, edits the design, calls the engine's tools, reads the measurements and repairs what failed | The assistant panel |
+| **Muse Spark, seeing** | Turns a photo of a hand-drawn circuit into a netlist and a testbench the engine then simulates. Reads a lab sheet or datasheet PDF and proposes its targets. Looks at the layout, plot or schematic you have open | **Attach** and **This view** |
+| **Muse Spark, teaching** | Learn mode: explains from the student's own circuit and measurements, and asks questions back. It can run checks but can't edit, so the student makes the changes | **Learn** |
+| **Muse Wonder 1.0** | An independent auditor of the work: do the checks test what they claim, how thin are the margins, what isn't covered? It can't edit, start runs or change a verdict | **Second opinion** |
+| **SAM 3.1** | Marks what you name on a chip layout, such as "power rails" | **Find in layout** |
+
+Muse tools helped build RocketIDE too. Part of the engine was written with Muse Code, and the MobileLLM demo chip was
+designed with Muse Spark 1.3 through the engine's MCP tools.
+
+These are the only models RocketIDE calls. Rocket Fuel's config enables no provider except Meta's, and refuses to start
+with any other model.
+
+**Every call is visible.** `./run.sh` sends every model call through a small relay that prints each one in the terminal,
 with the model name taken from the API's own response:
 
 ```text
@@ -148,8 +167,8 @@ MODEL_API_KEY=your-key
 
 - **The IDE and the engine** work as usual with `./run.sh`: open a demo, press Run checks, read the plots and the
   layout. Only the assistant needs a key.
-- **The agent** is in [`docs/sample-runs/`](docs/sample-runs/): real Muse Spark sessions, each with its full event
-  stream, the log of every model call, and what the engine produced. `./run.sh replay` plays one back in the
+- **The agent** is in [`docs/sample-runs/`](docs/sample-runs/): real sessions on Muse Spark and Muse Wonder, each with
+  its full event stream, the log of every model call, and what the engine produced. `./run.sh replay` plays one back in the
   assistant panel, marked REPLAY, without calling any model.
 
 <details>
@@ -187,7 +206,7 @@ flowchart LR
   UI["UI server<br/>UIUX/server"]
   A["Agent<br/>opencode + Rocket Fuel"]
   R["Call log<br/>meta-relay.py"]
-  M["Meta Model API<br/>Muse Spark"]
+  M["Meta Model API<br/>Muse Spark · Muse Wonder · SAM 3.1"]
   E[("Rocket Engine<br/>one per project")]
   T["EDA tools<br/>ngspice · Icarus · SAX<br/>Magic · KLayout · LibreLane"]
   P[("projects/<br/>one git repo each")]
@@ -198,6 +217,7 @@ flowchart LR
   UI -- "Run checks" --> E
   A -- "MCP over HTTP" --> E
   A --> R --> M
+  UI -- "Find in layout" --> R
   S -- "/call · /api" --> E
   E --> T
   UI --- P
@@ -299,9 +319,9 @@ RocketIDE/
 │   ├── engine-host.py         the shared engine: IDE, agent (MCP) and headless clients
 │   ├── seed-projects.sh       copies each demo into projects/ as its own git repo
 │   ├── fetch-pdk.sh           downloads the open-source sky130A
-│   ├── record-sample-runs.sh  records real Muse Spark sessions into docs/sample-runs/
+│   ├── record-sample-runs.sh  records real Muse sessions into docs/sample-runs/
 │   └── smoke.py               end-to-end test of the assembled IDE
-├── docs/sample-runs/          recorded Muse Spark sessions, with their call logs and outputs
+├── docs/sample-runs/          recorded Muse sessions, with their call logs and outputs
 ├── integration/overlays/      what each demo needs to open in the IDE (its constraints.yaml)
 ├── rocket-engine/  rocket_fuel/  UIUX/      the three parts, as submodules
 └── Demos/                     the three demo projects, as submodules
