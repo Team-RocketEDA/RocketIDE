@@ -21,12 +21,15 @@ async function shot(name, step) {
 }
 async function open(project, surface) {
   await post(`/api/projects/${project}/open`);
+  // A full load: changing only the # wouldn't restart the app on the project just opened.
+  await page.goto("about:blank");
   await page.goto(`${base}/#${surface}`);
   await page.waitForTimeout(3500);
 }
 
 await shot("home", async () => {
   await post("/api/project/close");
+  await page.goto("about:blank");
   await page.goto(base);
   await page.waitForSelector(".home-card");
   await page.waitForTimeout(1500);
