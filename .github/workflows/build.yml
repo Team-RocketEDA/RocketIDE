@@ -181,11 +181,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends iverilog
-      - name: MobileLLM contract tests and elaboration
+      # Not src/scripts/elab.sh: elaborating the whole chip at once outlasts this job's time limit. The Docker job
+      # runs the mac_unit testbench through the engine.
+      - name: MobileLLM contract tests
         working-directory: Demos/albert-chip-demo
-        run: |
-          python3 -m unittest discover -s architecture/tests
-          bash src/scripts/elab.sh
+        run: python3 -m unittest discover -s architecture/tests
 
   release:
     name: Publish release
