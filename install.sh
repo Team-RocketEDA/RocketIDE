@@ -62,7 +62,7 @@ if [[ -d .git || -f .git ]]; then
   step "Submodules"
   git submodule update --init --recursive
 fi
-for part in rocket-engine rocket_fuel UIUX Demos/photonic_matmul Demos/waveform-generator Demos/albert-chip-demo; do
+for part in rocket-engine rocket_fuel UIUX Demos/albert-chip-demo; do
   [[ -n "$(ls -A "$part" 2>/dev/null)" ]] || { echo "$part is empty." >&2; exit 1; }
 done
 

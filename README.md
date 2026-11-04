@@ -29,7 +29,7 @@ what the agent says.
 
 > **Built for the Meta AI Developer Hackathon.** Nothing here existed before the event: every repo in this project was
 > created and written between Oct 26 and Nov 4, 2026. We build on open-source tools, used as they are: opencode (the
-> agent runtime), ngspice, Icarus Verilog, SAX, Magic, KLayout, LibreLane and the sky130A PDK.
+> agent runtime), ngspice, Icarus Verilog, Magic, KLayout, LibreLane and the sky130A PDK.
 
 <p align="center">
   <img src="docs/images/overview.png" alt="RocketIDE on the MobileLLM decoder project: all checks pass, recent engine runs, and the assistant ready beside the workbench" width="100%">
@@ -53,7 +53,7 @@ simulator, so what they learn is true.
     </td>
     <td width="33%" valign="top">
       <h3>Verdicts from real tools</h3>
-      ngspice, Icarus Verilog, SAX, Magic, KLayout and LibreLane do the measuring. Targets come from
+      ngspice, Icarus Verilog, Magic, KLayout and LibreLane do the measuring. Targets come from
       <code>constraints.yaml</code>; the agent can't set or grade its own.
     </td>
     <td width="33%" valign="top">
@@ -94,42 +94,17 @@ The same facts go to `logs/meta-calls.jsonl`. Keys and prompts are never printed
 
 ## A look inside
 
-<table>
-  <tr>
-    <td width="50%"><img src="docs/images/plots.png" alt="Frequency response of the waveform generator's RC filter, drawn from the engine's ngspice sweep, with both checks passing"></td>
-    <td width="50%"><img src="docs/images/layout.png" alt="Layout viewer showing the routed mac_array GDS: 16,761 instances on 480 by 480 micrometres"></td>
-  </tr>
-  <tr>
-    <td valign="top"><b>Plots.</b> Bode plots straight from the engine's own sweep, with the targets from <code>constraints.yaml</code> drawn in.</td>
-    <td valign="top"><b>Layout.</b> The project's GDS, read and drawn in the browser: layers, cells, pan and zoom.</td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/images/verification.png" alt="Verification page: two of two required gates passing at the current revision, with the run history"></td>
-    <td width="50%"><img src="docs/images/schematic.png" alt="Schematic of the 8-bit R-2R DAC drawn from its SPICE netlist"></td>
-  </tr>
-  <tr>
-    <td valign="top"><b>Verification.</b> Every check with its target, measured value, margin, source revision and the run that produced it.</td>
-    <td valign="top"><b>Schematic.</b> Drawn from the netlists at this revision, with hierarchy, symbols and nets.</td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/images/picker.png" alt="Start screen with the RocketIDE logo: create a project from a template or open one of the three demos"></td>
-    <td width="50%"><img src="docs/images/constraints.png" alt="Constraints page: PDK, domains, approval mode, repair limit and each check's target"></td>
-  </tr>
-  <tr>
-    <td valign="top"><b>Start screen.</b> Create a project from a template or open a demo. The engine's tools are listed with what's installed.</td>
-    <td valign="top"><b>Constraints.</b> The targets the engine grades against, the approval mode and the repair limit, saved to <code>constraints.yaml</code> as a commit.</td>
-  </tr>
-</table>
+<p align="center">
+  <img src="docs/images/layout.png" alt="Layout viewer showing the routed mac_array GDS: 16,761 instances on 480 by 480 micrometres" width="100%">
+</p>
 
-## Demo projects
+The project's GDS, read and drawn in the browser: layers, cells, pan and zoom. Find in layout marks what you name on it.
 
-Three real designs ship with RocketIDE. Each opens as its own project, with its checks wired to the engine.
+## Demo project
 
-| Project | Domain | What it shows | Run checks |
-|---|---|---|---|
-| **8-bit waveform generator**<br>`Demos/waveform-generator` | Mixed-signal, sky130A | Phase accumulator, R-2R DAC and RC filter | ngspice AC sweep: passband and corner frequency |
-| **MobileLLM-125M decoder chip**<br>`Demos/albert-chip-demo` | Digital, sky130A | A transformer decoder in RTL, with a first block placed and routed | Icarus `mac_unit` self-checking testbench |
-| **Photonic matrix multiplier**<br>`Demos/photonic_matmul` | Photonic, CORNERSTONE Si340 | A 4×4 Reck mesh of tunable MZIs | SAX optical response |
+**MobileLLM-125M decoder chip** (`Demos/albert-chip-demo`) is a transformer decoder in RTL on sky130A, with a first block
+placed and routed. It opens as its own project, and Run checks runs the Icarus `mac_unit` self-checking testbench through
+the engine.
 
 You can also start a new project from the op-amp template, a two-stage amplifier on generic models that needs no
 foundry PDK.
@@ -150,7 +125,7 @@ you don't have one.
 ```sh
 git clone --recurse-submodules https://github.com/Team-RocketEDA/RocketIDE.git
 cd RocketIDE
-./install.sh            # add --photonic for optical runs, --no-desktop to skip Electron
+./install.sh            # add --no-desktop to skip Electron
 ```
 
 Then start the app:
@@ -209,7 +184,7 @@ flowchart LR
   R["Call log<br/>meta-relay.py"]
   M["Meta Model API<br/>Muse Spark · Muse Wonder · SAM 3.1"]
   E[("Rocket Engine<br/>one per project")]
-  T["EDA tools<br/>ngspice · Icarus · SAX<br/>Magic · KLayout · LibreLane"]
+  T["EDA tools<br/>ngspice · Icarus<br/>Magic · KLayout · LibreLane"]
   P[("projects/<br/>one git repo each")]
 
   B -- "HTTP, same origin" --> UI
@@ -268,14 +243,14 @@ The engine that serves the IDE is also available to scripts on the same machine 
 
 ```sh
 # Through the same handlers the IDE uses: run, fetch if deferred, record the evidence
-curl -s localhost:8765/projects/waveform-generator/call \
+curl -s localhost:8765/projects/albert-chip-demo/call \
   -H 'Content-Type: application/json' \
   -d '{"operation": "get_check_results", "arguments": {}}'
 
 # The engine's own HTTP API, on the same engine
-curl -s localhost:8765/projects/waveform-generator/api/ \
+curl -s localhost:8765/projects/albert-chip-demo/api/ \
   -H 'Content-Type: application/json' \
-  -d '{"project_id": "waveform-generator", "operation": "list_job_kinds", "arguments": {}}'
+  -d '{"project_id": "albert-chip-demo", "operation": "list_job_kinds", "arguments": {}}'
 ```
 
 Any MCP client can attach at `http://127.0.0.1:8765/projects/<name>/mcp`. There is no authentication, so keep it on
@@ -302,12 +277,11 @@ Set these in `.env`; anything already exported wins.
 
 | Check | Needs |
 |---|---|
-| Op-amp template, waveform RC filter | `ngspice` |
+| Op-amp template, and circuits from a sketch | `ngspice` |
 | MobileLLM `mac_unit` testbench | `iverilog` |
-| Photonic mesh | `./install.sh --photonic` (SAX and GDSFactory) |
 | sky130A DRC, LVS and PDK simulation | The PDK registered at install (`/pdk` in Docker) |
 
-The engine's provisioner installs the tools. Each demo's own README has its results, how to reproduce them, and any
+The engine's provisioner installs the tools. The demo's own README has its results, how to reproduce them, and any
 flows that need more.
 
 ## Repository layout
@@ -319,18 +293,18 @@ RocketIDE/
 ├── Dockerfile                 the whole IDE in one Ubuntu 24.04 container
 ├── scripts/
 │   ├── engine-host.py         the shared engine: IDE, agent (MCP) and headless clients
-│   ├── seed-projects.sh       copies each demo into projects/ as its own git repo
+│   ├── seed-projects.sh       copies the demo into projects/ as its own git repo
 │   ├── fetch-pdk.sh           downloads the open-source sky130A
 │   ├── record-sample-runs.sh  records real Muse sessions into docs/sample-runs/
 │   └── smoke.py               end-to-end test of the assembled IDE
 ├── docs/sample-runs/          recorded Muse sessions, with their call logs and outputs
-├── integration/overlays/      what each demo needs to open in the IDE (its constraints.yaml)
+├── integration/overlays/      what the demo needs to open in the IDE (its constraints.yaml)
 ├── rocket-engine/  rocket_fuel/  UIUX/      the three parts, as submodules
-└── Demos/                     the three demo projects, as submodules
+└── Demos/albert-chip-demo/    the demo project, as a submodule
 ```
 
-The parts and demos are git submodules, each pinned to a tested commit, and the IDE never edits them. `install.sh`
-copies each demo to `projects/`, where the IDE and the agent work on it. `scripts/seed-projects.sh --reset` restores
+The parts and the demo are git submodules, each pinned to a tested commit, and the IDE never edits them. `install.sh`
+copies the demo to `projects/`, where the IDE and the agent work on it. `scripts/seed-projects.sh --reset` restores
 them from `Demos/`, and discards any work in those copies.
 
 To move a part to the latest commit of its branch:
@@ -351,12 +325,11 @@ animations (SVG, WebM and animated PNG), plus the colours, type and rules for us
 
 ## Testing and releases
 
-`scripts/smoke.py` starts the assembled IDE and drives it the way a person would: it opens each demo, runs its checks,
+`scripts/smoke.py` starts the assembled IDE and drives it the way a person would: it opens the demo, runs its checks,
 reads the plot data, and confirms the engine's APIs and the shared engine. `--agent` also sends a prompt to Muse Spark,
 which needs `MODEL_API_KEY`, and confirms it reached the engine. A check whose tool isn't installed reports SKIP, never a pass.
 
-`.github/workflows/build.yml` builds the Docker image and the desktop app on a clean machine, and runs the photonic and
-demo checks. Pushing a `v*` tag publishes a release with the archive from `./install.sh --package`, once those jobs pass.
+`.github/workflows/build.yml` builds the Docker image and the desktop app on a clean machine, and runs the demo's checks. Pushing a `v*` tag publishes a release with the archive from `./install.sh --package`, once those jobs pass.
 
 <br>
 

@@ -90,20 +90,18 @@ record() {
 
 declare -i failed=0
 wanted=("$@")
-[[ ${#wanted[@]} -gt 0 ]] || wanted=(1-sketch-to-circuit 2-opamp-to-spec 3-learn-mode 4-second-opinion 5-waveform-check 6-mac-unit-check)
+[[ ${#wanted[@]} -gt 0 ]] || wanted=(1-sketch-to-circuit 2-opamp-to-spec 3-learn-mode 4-second-opinion 5-mac-unit-check)
 for name in "${wanted[@]}"; do
   case "$name" in
     1-sketch-to-circuit) record "$name" sketch \
       "Turn this sketch into a netlist and a testbench under design/, and run it with the engine. Report the corner frequency it measures." \
       rocket-auto docs/sample-inputs/rc-filter-sketch.png || failed+=1 ;;
     2-opamp-to-spec) record "$name" opamp "Bring this op-amp to spec." || failed+=1 ;;
-    3-learn-mode) record "$name" waveform-generator \
-      "I'm new to this. What does the RC filter check measure, and why does it matter here? Run it and teach me from the result." rocket-tutor || failed+=1 ;;
+    3-learn-mode) record "$name" albert-chip-demo \
+      "I'm new to this. What does the mac_unit check measure, and why does it matter here? Run it and teach me from the result." rocket-tutor || failed+=1 ;;
     4-second-opinion) record "$name" opamp \
       "Give me an independent second opinion on this design and its evidence." rocket-reviewer || failed+=1 ;;
-    5-waveform-check) record "$name" waveform-generator \
-      "Run this project's checks with the engine and tell me whether the design meets its targets. Cite the measured values." || failed+=1 ;;
-    6-mac-unit-check) record "$name" albert-chip-demo \
+    5-mac-unit-check) record "$name" albert-chip-demo \
       "Run this project's checks with the engine, then explain what the mac_unit testbench proves and what it doesn't." || failed+=1 ;;
     *) echo "Unknown run: $name" >&2; failed+=1 ;;
   esac

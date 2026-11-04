@@ -21,7 +21,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DEMOS = ["albert-chip-demo", "photonic_matmul", "waveform-generator"]
+DEMOS = ["albert-chip-demo"]
 results = []
 
 
@@ -110,12 +110,6 @@ def expect_opamp(verdict):
         return f"expected FAIL at 55.73 dB, got {verdict.get('status')} {gain}"
 
 
-def expect_filter(verdict):
-    corner = measured(verdict).get("filter_corner_mhz")
-    if verdict.get("status") != "PASS" or corner is None or abs(corner - 3.386) > 0.1:
-        return f"expected PASS near 3.39 MHz, got {verdict.get('status')} {corner}"
-
-
 def expect_pass(verdict):
     if verdict.get("status") != "PASS":
         return f"expected PASS, got {verdict.get('status')}: {str(verdict.get('reason'))[:120]}"
@@ -180,7 +174,7 @@ def main():
         print("      tools:", " ".join(sorted(tool for tool, found in info["tools"].items() if found)) or "none")
         status, listed = api.json("GET", "/api/projects")
         names = {project["name"] for project in listed}
-        check("all three demos are listed", names >= set(DEMOS), ", ".join(sorted(names)))
+        check("the demo is listed", names >= set(DEMOS), ", ".join(sorted(names)))
         status, _ = api.call("GET", "/api/status", headers={"Host": "evil.example"})
         check("other sites are refused", status == 403, f"HTTP {status}")
 
@@ -195,11 +189,7 @@ def main():
             check("agent: attached to the shared engine", mcp.get("type") == "remote"
                   and mcp.get("url") == f"{engine}/projects/smoke-opamp/mcp", json.dumps(mcp)[:120])
 
-        if run_checks(api, "waveform-generator", expect_filter):
-            check_plot_data(api, "waveform-generator", "ac", "AC Analysis")
         run_checks(api, "albert-chip-demo", expect_pass)
-        if run_checks(api, "photonic_matmul", expect_pass):
-            check_plot_data(api, "photonic_matmul", "optical", "wavelength_nm")
         api.json("POST", "/api/project/close")
 
         # The IDE's Run checks went to the engine run.sh started, so that engine remembers them.
@@ -207,15 +197,15 @@ def main():
             health = json.load(response)
         check("one engine serves every project", health["ok"] and set(DEMOS) <= set(health["projects"]),
               ", ".join(health["projects"]))
-        envelope = {"project_id": "waveform-generator", "operation": "get_check_results", "arguments": {}}
-        request = urllib.request.Request(f"{engine}/projects/waveform-generator/api/", json.dumps(envelope).encode(),
+        envelope = {"project_id": "albert-chip-demo", "operation": "get_check_results", "arguments": {}}
+        request = urllib.request.Request(f"{engine}/projects/albert-chip-demo/api/", json.dumps(envelope).encode(),
                                          {"Content-Type": "application/json"})
         with urllib.request.urlopen(request, timeout=30) as response:
             answer = json.load(response)
-        latest = answer.get("checks", {}).get("run_spice", {})
+        latest = answer.get("checks", {}).get("run_hdl_test", {})
         check("headless: the engine's HTTP API sees the IDE's run", latest.get("status") == "PASS",
               json.dumps(latest)[:120])
-        request = urllib.request.Request(f"{engine}/projects/waveform-generator/api/", json.dumps(envelope).encode(),
+        request = urllib.request.Request(f"{engine}/projects/albert-chip-demo/api/", json.dumps(envelope).encode(),
                                          {"Content-Type": "application/json", "Origin": "http://evil.example"})
         try:
             urllib.request.urlopen(request, timeout=10)
