@@ -10,7 +10,7 @@
 # It uses fresh copies of the projects and its own engine and relay, so it leaves projects/ alone. A run with any
 # failed call or a model that isn't Muse is rejected and not kept.
 #
-#   scripts/record-sample-runs.sh [name...]     default: all of 1-opamp-to-spec 2-waveform-check 3-mac-unit-check
+#   scripts/record-sample-runs.sh [name...]     default: every run listed at the end of this file
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -37,10 +37,14 @@ free_port() { python3 -I -c 'import socket; s=socket.socket(); s.bind(("127.0.0.
 
 export ROCKET_PROJECTS_DIR="$WORK/projects"
 scripts/seed-projects.sh >/dev/null
-cp -r rocket_fuel/examples/opamp-engine "$ROCKET_PROJECTS_DIR/opamp"
-git -C "$ROCKET_PROJECTS_DIR/opamp" init -q -b main
-git -C "$ROCKET_PROJECTS_DIR/opamp" add -A
-git -C "$ROCKET_PROJECTS_DIR/opamp" -c user.name="RocketEDA IDE" -c user.email=ide@rocketeda.local commit -q -m "Create project from opamp-engine"
+new_project() {
+  cp -r "rocket_fuel/examples/$1" "$ROCKET_PROJECTS_DIR/$2"
+  git -C "$ROCKET_PROJECTS_DIR/$2" init -q -b main
+  git -C "$ROCKET_PROJECTS_DIR/$2" add -A
+  git -C "$ROCKET_PROJECTS_DIR/$2" -c user.name="RocketEDA IDE" -c user.email=ide@rocketeda.local commit -q -m "Create project from $1"
+}
+new_project opamp-engine opamp
+new_project empty sketch
 
 ENGINE_PORT="$(free_port)"
 "$ENGINE/.venv/bin/python" scripts/engine-host.py --port "$ENGINE_PORT" --projects-dir "$ROCKET_PROJECTS_DIR" >"$WORK/engine.log" 2>&1 &
@@ -52,7 +56,7 @@ for _ in $(seq 1 120); do
 done
 
 record() {
-  local name="$1" project="$2" prompt="$3"
+  local name="$1" project="$2" prompt="$3" agent="${4:-rocket-approval}" attach="${5:-}"
   local tmp="$WORK/run-$name" dir="$ROCKET_PROJECTS_DIR/$project" port pid
   mkdir -p "$tmp/outputs"
   port="$(free_port)"
@@ -62,7 +66,7 @@ record() {
   echo "==> $name"
   local ok=1
   ROCKET_META_BASE_URL="http://127.0.0.1:$port/v1" python3 -I rocket_fuel/evals/record_session.py \
-    --project "$dir" --agent rocket-approval --approve --prompt "$prompt" --out "$tmp/session.jsonl" || ok=0
+    --project "$dir" --agent "$agent" --approve --prompt "$prompt" --out "$tmp/session.jsonl" ${attach:+--attach "$attach"} || ok=0
   kill "$pid" 2>/dev/null || true
   [[ -d "$dir/results" ]] && cp -r "$dir/results" "$tmp/outputs/results"
   git -C "$dir" log --format='%h %ad %s' --date=iso > "$tmp/outputs/commits.txt"
@@ -81,13 +85,20 @@ record() {
 
 declare -i failed=0
 wanted=("$@")
-[[ ${#wanted[@]} -gt 0 ]] || wanted=(1-opamp-to-spec 2-waveform-check 3-mac-unit-check)
+[[ ${#wanted[@]} -gt 0 ]] || wanted=(1-sketch-to-circuit 2-opamp-to-spec 3-learn-mode 4-second-opinion 5-waveform-check 6-mac-unit-check)
 for name in "${wanted[@]}"; do
   case "$name" in
-    1-opamp-to-spec) record "$name" opamp "Bring this op-amp to spec." || failed+=1 ;;
-    2-waveform-check) record "$name" waveform-generator \
+    1-sketch-to-circuit) record "$name" sketch \
+      "Turn this sketch into a netlist and a testbench under design/, and run it with the engine. Report the corner frequency it measures." \
+      rocket-auto docs/sample-inputs/rc-filter-sketch.png || failed+=1 ;;
+    2-opamp-to-spec) record "$name" opamp "Bring this op-amp to spec." || failed+=1 ;;
+    3-learn-mode) record "$name" waveform-generator \
+      "I'm new to this. What does the RC filter check measure, and why does it matter here? Run it and teach me from the result." rocket-tutor || failed+=1 ;;
+    4-second-opinion) record "$name" opamp \
+      "Give me an independent second opinion on this design and its evidence." rocket-reviewer || failed+=1 ;;
+    5-waveform-check) record "$name" waveform-generator \
       "Run this project's checks with the engine and tell me whether the design meets its targets. Cite the measured values." || failed+=1 ;;
-    3-mac-unit-check) record "$name" albert-chip-demo \
+    6-mac-unit-check) record "$name" albert-chip-demo \
       "Run this project's checks with the engine, then explain what the mac_unit testbench proves and what it doesn't." || failed+=1 ;;
     *) echo "Unknown run: $name" >&2; failed+=1 ;;
   esac
