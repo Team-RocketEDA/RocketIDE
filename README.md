@@ -100,6 +100,14 @@ them under **Activity**. Keys and prompts are never printed or saved.
 
 <table>
   <tr>
+    <td width="50%"><img src="docs/images/live-drawing.png" alt="Live build part-way through: a block diagram drawing itself mark by mark on white paper, with the build's steps along the bottom"></td>
+    <td width="50%"><img src="docs/images/verification.png" alt="Verification page: a flow from design to verdict, then each measurement on a bar against its target"></td>
+  </tr>
+  <tr>
+    <td valign="top"><b>Live build.</b> Watch the design take shape as the agent works: code line by line with green and red, drawings mark by mark, and checks landing on their targets. Replay the build afterwards.</td>
+    <td valign="top"><b>Verification.</b> How each verdict was reached, every measurement against its target, trends across runs, and which blocks a run has really tested.</td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/images/home.png" alt="RocketIDE home screen: recent projects with their pictures, a New project button, and three guided lessons"></td>
     <td width="50%"><img src="docs/images/diagrams.png" alt="Diagrams page: a block diagram read from the MobileLLM chip's Verilog, above the project's architecture pictures and pages"></td>
   </tr>
@@ -124,9 +132,6 @@ them under **Activity**. Keys and prompts are never printed or saved.
     <td valign="top"><b>Lessons.</b> Each starts out failing, the student makes the fix, and the simulator decides when they've passed.</td>
   </tr>
 </table>
-
-**Live build** shows the work as it happens: when the assistant starts, the app draws each file it writes as a diagram,
-schematic or picture, beside a timeline of its steps, with new blocks marked.
 
 ## Demo project
 
