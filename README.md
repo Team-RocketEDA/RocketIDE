@@ -23,8 +23,8 @@
 <br>
 
 RocketIDE is a chip-design workbench where you and an AI agent work on the same project at the same time. You describe
-what you want; the agent edits the design, runs real EDA tools and explains the result. You see every change, approve
-what matters, and can do all of it by hand. Whether a check passes is decided by the engine's measurements, never by
+what you want; the agent writes the design, runs real EDA tools and explains the result. You watch it take shape, point
+at what you want changed, and can do all of it by hand. Whether a check passes is decided by the engine's measurements, never by
 what the agent says.
 
 > **Built for the Meta AI Developer Hackathon.** Nothing here existed before the event: every repo in this project was
@@ -32,18 +32,18 @@ what the agent says.
 > agent runtime), ngspice, Icarus Verilog, Magic, KLayout, LibreLane and the sky130A PDK.
 
 <p align="center">
-  <img src="docs/images/overview.png" alt="RocketIDE on the MobileLLM decoder project: all checks pass, recent engine runs, and the assistant ready beside the workbench" width="100%">
+  <img src="docs/images/overview.png" alt="RocketIDE on the MobileLLM decoder project: its architecture diagrams and routed layout above the checks and recent activity, with the assistant beside the workbench" width="100%">
 </p>
 
 ## Who it's for
 
-Students who want to learn chip design by building one. Learning it usually means costly professional tools, a hard
-setup and slow feedback. RocketIDE runs on free, open-source tools and a free PDK. A student can start from a sketch on
-paper, get a working design, and learn from a tutor that teaches from their own circuit. Every result comes from a real
-simulator, so what they learn is true.
+Anyone who designs chips. The usual path means costly professional tools, a hard setup and slow feedback between changing
+a design and finding out whether it works. RocketIDE runs on free, open-source tools and a free PDK. Describe a block, or
+start from a sketch or a spec, and the agent builds the design and its tests while you watch. Every result comes from a
+real simulator, so a pass means something.
 
-New to it? The start screen offers three guided lessons: your first filter, your first amplifier, and a real op-amp. Each
-starts out failing, the student makes the fix, and the simulator decides when they've passed.
+New to chip design? The start screen also has three guided lessons: your first filter, your first amplifier, and a real
+op-amp. Each starts out failing, you make the fix, and the simulator decides when you've passed.
 
 ## Why RocketIDE
 
@@ -61,7 +61,7 @@ starts out failing, the student makes the fix, and the simulator decides when th
     </td>
     <td width="33%" valign="top">
       <h3>Guardrails built in</h3>
-      Protected folders, a repair limit, an allowlist of engine tools and approvals for risky changes, enforced
+      Protected folders, a repair limit, an allowlist of engine tools and targets the agent can't change once set, enforced
       by the harness rather than by the prompt.
     </td>
   </tr>
@@ -74,8 +74,8 @@ Each Meta model does the job it's best at, and none of them decides whether a de
 | Model | What it does here | Where to find it |
 |---|---|---|
 | **Muse Spark 1.3** | Runs the design agent: reads the project, edits the design, calls the engine's tools, reads the measurements and repairs what failed | The assistant panel |
-| **Muse Spark, seeing** | Turns a photo of a hand-drawn circuit into a netlist and a testbench the engine then simulates. Reads a lab sheet or datasheet PDF and proposes its targets. Looks at the layout, plot or schematic you have open | **Attach** and **This view** |
-| **Muse Spark, teaching** | Learn mode: explains from the student's own circuit and measurements, and asks questions back. It can run checks but can't edit, so the student makes the changes | **Learn** |
+| **Muse Spark, seeing** | Turns a photo of a hand-drawn circuit into a netlist and a testbench the engine then simulates. Reads a spec or datasheet PDF and proposes its targets. Looks at the layout, plot or schematic you have open | **Attach** and **This view** |
+| **Muse Spark, teaching** | Learn mode: explains from your own circuit and measurements, and asks questions back. It can run checks but can't edit, so you make the changes | **Learn** |
 | **Muse Wonder 1.0** | An independent auditor of the work: do the checks test what they claim, how thin are the margins, what isn't covered? It can't edit, start runs or change a verdict | **Second opinion** |
 | **SAM 3.1** | Marks what you name on a chip layout, such as "power rails" | **Find in layout** |
 
@@ -129,7 +129,7 @@ them under **Activity**. Keys and prompts are never printed or saved.
   </tr>
   <tr>
     <td valign="top"><b>Layout.</b> The project's GDS, read and drawn in the browser. Find in layout marks what you name on it.</td>
-    <td valign="top"><b>Lessons.</b> Each starts out failing, the student makes the fix, and the simulator decides when they've passed.</td>
+    <td valign="top"><b>Lessons.</b> Each starts out failing, you make the fix, and the simulator decides when you've passed.</td>
   </tr>
 </table>
 
@@ -150,8 +150,8 @@ foundry PDK.
 docker run --rm -p 127.0.0.1:5173:5173 ghcr.io/team-rocketeda/rocketide
 ```
 
-Then open http://localhost:5173. The first start downloads the open-source sky130A PDK (about 140 MB), and the log prints
-every model call. To keep your projects and that download between runs, add
+The image is about 4 GB to download. Then open http://localhost:5173, and paste your Meta Model API key into the assistant
+panel. The first start downloads the open-source sky130A PDK (about 140 MB), and the log prints every model call. To keep your projects and that download between runs, add
 `-v rocketide-store:/stores/rocketeda -v rocketide-projects:/opt/rocketide/projects`. The image is built for x86-64, and
 runs more slowly under emulation on Apple Silicon.
 
