@@ -82,6 +82,10 @@ Each Meta model does the job it's best at, and none of them decides whether a de
 Muse tools helped build RocketIDE too. Part of the engine was written with Muse Code, and the MobileLLM demo chip was
 designed with Muse Spark 1.3 through the engine's MCP tools.
 
+**Status:** we didn't get Meta Model API access in time to run these against the real models before the deadline. They're
+written to Meta's API documentation, and tested end to end in CI against a scripted stand-in for the API. The first real
+run may need adjustments.
+
 These are the only models RocketIDE calls. Rocket Fuel's config enables no provider except Meta's, and refuses to start
 with any other model.
 
@@ -189,9 +193,7 @@ also set `MODEL_API_KEY` in `.env`, but a key saved in the app takes priority.
 
 - **The IDE and the engine** work as usual with `./run.sh`: open a demo, press Run checks, read the plots and the
   layout. Only the assistant needs a key.
-- **The agent** is in [`docs/sample-runs/`](docs/sample-runs/): real sessions on Muse Spark and Muse Wonder, each with
-  its full event stream, the log of every model call, and what the engine produced. `./run.sh replay` plays one back in the
-  assistant panel, marked REPLAY, without calling any model.
+- **The assistant** needs a Meta Model API key to answer.
 
 <details>
 <summary><b>Build the Docker image yourself</b></summary>
@@ -334,9 +336,8 @@ RocketIDE/
 │   ├── engine-host.py         the shared engine: IDE, agent (MCP) and headless clients
 │   ├── seed-projects.sh       copies the demo into projects/ as its own git repo
 │   ├── fetch-pdk.sh           downloads the open-source sky130A
-│   ├── record-sample-runs.sh  records real Muse sessions into docs/sample-runs/
+│   ├── record-sample-runs.sh  records Muse sessions with their call logs and outputs, given a key
 │   └── smoke.py               end-to-end test of the assembled IDE
-├── docs/sample-runs/          recorded Muse sessions, with their call logs and outputs
 ├── integration/overlays/      what the demo needs to open in the IDE (its constraints.yaml)
 ├── rocket-engine/  rocket_fuel/  UIUX/      the three parts, as submodules
 └── Demos/albert-chip-demo/    the demo project, as a submodule
