@@ -10,9 +10,11 @@
 # http://127.0.0.1:8765 (ROCKET_ENGINE_PORT): POST /projects/<name>/call, or the engine's own HTTP API at
 # /projects/<name>/api/. Set ROCKET_UI_HOST / ROCKET_UI_PORT to change the web app's address.
 #
-# Every model call goes to the Meta Model API through rocket_fuel/scripts/meta-relay.py, which prints it in this
-# terminal with the model name the API's response reports, and saves the same facts to logs/meta-calls.jsonl. Keys
-# and prompts are never printed or saved.
+# The model can be any provider/model the pinned opencode understands: Meta by default, a native provider
+# (openai, anthropic, google, ...), or a custom OpenAI-compatible endpoint. RocketIDE passes the saved
+# provider configuration to the agent; rocket_fuel/scripts/model_config.py is the single source of truth.
+# Model activity is printed here and saved to logs/model-calls.jsonl by the Rocket Fuel plugin (and, when
+# enabled, a transparent relay). Keys and prompts are never printed or saved.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -22,10 +24,20 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     web|desktop|replay) MODE="$1" ;;
     --fresh) FRESH=1 ;;
-    -h|--help) sed -n 2,15p "$0" | cut -c3-; exit 0 ;;
+    -h|--help) sed -n 2,17p "$0" | cut -c3-; exit 0 ;;
     *) echo "Unknown option: $1 (try --help)" >&2; exit 2 ;;
   esac
   shift
+done
+
+# Which model settings were exported by the caller. They win over .env and over the saved configuration.
+# Only the choice of model is overridden by the saved configuration. Where that configuration and the call log
+# live is a path setting, so a value from .env or the caller is kept.
+MODEL_VARS=(ROCKET_MODEL ROCKET_PROVIDER ROCKET_MODEL_ID ROCKET_PROVIDER_TYPE ROCKET_PROVIDER_NAME
+            ROCKET_BASE_URL ROCKET_SMALL_MODEL ROCKET_TUTOR_MODEL ROCKET_REVIEWER_MODEL)
+PRESET=()
+for name in "${MODEL_VARS[@]}"; do
+  [[ -n "${!name+x}" ]] && PRESET+=("$name")
 done
 
 # .env fills in what isn't set; anything already exported wins, such as docker run -e.
@@ -34,6 +46,17 @@ if [[ -f "$ROOT/.env" ]]; then
   set -a; source "$ROOT/.env"; set +a
   eval "$EXPORTED"
 fi
+
+# A saved provider configuration is authoritative over .env, so switching provider in the app takes effect
+# without editing .env. Values exported before .env still win (docker run -e, an explicit shell export).
+if [[ -f "$(python3 -I "$ROOT/rocket_fuel/scripts/model_config.py" path)" ]]; then
+  for name in "${MODEL_VARS[@]}"; do
+    if [[ ! " ${PRESET[*]} " == *" $name "* ]]; then unset "$name"; fi
+  done
+fi
+# The launcher's activity log lives with the checkout, so the terminal and the app read the same file.
+export ROCKET_MODEL_CALL_LOG="${ROCKET_MODEL_CALL_LOG:-$ROOT/logs/model-calls.jsonl}"
+eval "$(python3 -I "$ROOT/rocket_fuel/scripts/model_config.py" shell --with-key)"
 
 ENGINE="$ROOT/rocket-engine"
 export ROCKET_ENGINE_HOME="$ENGINE"
@@ -93,9 +116,7 @@ for _ in $(seq 1 120); do
   sleep 0.5
 done
 
-# 3. The model. Only Meta models run: the agent's config enables no other provider, and its calls go through the
-# relay. A replay makes no model calls at all.
-export ROCKET_MODEL="${ROCKET_MODEL:-meta/muse-spark-1.3}"
+# 3. The model. Any provider/model the pinned opencode understands, from the canonical configuration.
 if [[ "$MODE" == replay ]]; then
   SAMPLE="$(ls "$ROOT"/docs/sample-runs/*/session.jsonl 2>/dev/null | head -1 || true)"
   SAMPLE="${ROCKET_REPLAY:-$SAMPLE}"
@@ -106,23 +127,43 @@ if [[ "$MODE" == replay ]]; then
   export ROCKET_AGENT_URL="http://127.0.0.1:$REPLAY_PORT"
   echo "Replaying ${SAMPLE#"$ROOT"/}. Open a project: the assistant plays it back, marked REPLAY. No model is called."
 else
-  case "$ROCKET_MODEL" in
-    meta/*) ;;
-    *) echo "ROCKET_MODEL=$ROCKET_MODEL is not a Meta model. Use meta/muse-spark-1.3 in .env." >&2; exit 2 ;;
-  esac
-  RELAY_PORT="${ROCKET_META_RELAY_PORT:-8766}"
   mkdir -p "$ROOT/logs"
-  python3 -I "$ROOT/rocket_fuel/scripts/meta-relay.py" --port "$RELAY_PORT" --log "$ROOT/logs/meta-calls.jsonl" \
-    --upstream "${ROCKET_META_UPSTREAM:-https://api.meta.ai}" &
+  export ROCKET_MODEL_CALL_LOG="${ROCKET_MODEL_CALL_LOG:-$ROOT/logs/model-calls.jsonl}"
+  # One provider-neutral line per completed call, from the Rocket Fuel plugin's log.
+  python3 -I "$ROOT/rocket_fuel/scripts/model-log-tail.py" "$ROCKET_MODEL_CALL_LOG" &
   children+=($!)
-  export ROCKET_META_BASE_URL="http://127.0.0.1:$RELAY_PORT/v1"
-  # The same log feeds the app's list of model calls.
-  export ROCKET_META_CALL_LOG="$ROOT/logs/meta-calls.jsonl"
-  CREDENTIALS="${ROCKET_CREDENTIALS_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/rocketide/credentials}"
-  if [[ -z "${MODEL_API_KEY:-}" && ! -s "$CREDENTIALS" ]]; then
-    echo "No Meta API key yet. Add yours in the app's assistant panel. The IDE and engine checks work without one."
-    echo "To see the agent without a key: ./run.sh replay"
+
+  # A relay is optional and only for OpenAI-compatible endpoints. It forwards bytes unchanged and never buffers
+  # a stream. Native providers (Anthropic, Gemini, ...) keep their own protocol, so they never go through it.
+  UPSTREAM="${ROCKET_RELAY_UPSTREAM:-${ROCKET_META_UPSTREAM:-}}"
+  if [[ -n "$UPSTREAM" ]]; then
+    if [[ "${ROCKET_PROVIDER_TYPE:-openai-compatible}" != "openai-compatible" && "${ROCKET_PROVIDER:-meta}" != "meta" ]]; then
+      echo "A model relay only works with OpenAI-compatible providers; ${ROCKET_PROVIDER} is ${ROCKET_PROVIDER_TYPE}." >&2
+      exit 2
+    fi
+    RELAY_PORT="${ROCKET_MODEL_RELAY_PORT:-${ROCKET_META_RELAY_PORT:-8766}}"
+    python3 -I "$ROOT/rocket_fuel/scripts/model-relay.py" --port "$RELAY_PORT" --log "$ROCKET_MODEL_CALL_LOG" \
+      --upstream "$UPSTREAM" --provider "${ROCKET_PROVIDER:-meta}" --tag "${ROCKET_PROVIDER_NAME:-Model API}" &
+    children+=($!)
+    export ROCKET_BASE_URL="http://127.0.0.1:$RELAY_PORT/v1"
+    # Find in layout is a separate Meta capability. When the agent itself is on Meta, send its SAM calls
+    # through the same relay so the terminal shows them too; otherwise leave its own endpoint alone.
+    if [[ "${ROCKET_PROVIDER:-meta}" == meta ]]; then
+      export ROCKET_META_BASE_URL="$ROCKET_BASE_URL"
+    fi
   fi
+  # Compatibility for existing installations that still read these names.
+  export ROCKET_META_CALL_LOG="$ROCKET_MODEL_CALL_LOG"
+  case "${ROCKET_PROVIDER:-meta}" in
+    ollama|lmstudio|llamacpp|vllm) ;;  # local servers need no key
+    *)
+      if ! python3 -I "$ROOT/rocket_fuel/scripts/model_config.py" export-key --provider "$ROCKET_PROVIDER" >/dev/null 2>&1; then
+        echo "No API key yet for ${ROCKET_PROVIDER_NAME:-$ROCKET_PROVIDER}. Add one in the assistant's Settings (or .env)."
+        echo "The IDE and engine checks work without one. To see the agent without a model: ./run.sh replay"
+      fi
+      ;;
+  esac
+  echo "Model: $ROCKET_MODEL ($ROCKET_PROVIDER_TYPE${ROCKET_BASE_URL:+ at $ROCKET_BASE_URL})"
 fi
 
 # 4. The web app (and through it the agent), then the desktop window on the same server.

@@ -4,7 +4,8 @@ drives the same HTTP API the browser uses. A check whose EDA tool isn't installe
 
 Usage: scripts/smoke.py [--port 5199] [--agent] [--strict]
 --strict fails instead of skipping when a tool is missing, so a clean machine can't pass by not running anything.
---agent also sends one prompt to Muse Spark, which needs your Meta API key, added in the app or in .env.
+--agent also sends one prompt to the configured model (Meta Muse Spark by default), which needs that provider's API key,
+added in the app or in .env.
 """
 
 import argparse

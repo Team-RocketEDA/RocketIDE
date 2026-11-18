@@ -15,9 +15,10 @@
 # download between runs with -v rocketide-store:/stores/rocketeda -v rocketide-projects:/opt/rocketide/projects.
 # Your own PDK: -v /path/to/sky130A:/pdk:ro, and -e PDK_ID=... -e PDK_REVISION=... if it isn't sky130A.
 #
-# Model: Muse Spark, through the Meta Model API. Add your key in the app's assistant panel (it's kept on the store
-# volume), or pass it from the shell with -e MODEL_API_KEY. The container's log prints every call. Without a key the
-# IDE and engine checks still work.
+# Model: Meta Muse Spark by default, through the Meta Model API. Add its key in the app's assistant Settings (it's
+# kept on the store volume), or pass it from the shell with -e MODEL_API_KEY. Another native provider or a custom
+# OpenAI-compatible endpoint can be selected in Settings without rebuilding the image. The log prints every call.
+# Without a key the IDE and engine checks still work.
 # Headless API, from inside the container: http://127.0.0.1:8765 (loopback only, no auth).
 FROM ubuntu:24.04
 LABEL org.opencontainers.image.source="https://github.com/Team-RocketEDA/RocketIDE"
@@ -57,7 +58,7 @@ RUN mkdir -p projects /tools /stores/rocketeda /pdk \
     && chown -R rocketeda:rocketeda /opt/rocketide /tools /stores /pdk
 USER rocketeda
 
-# Only Meta models run.
+# The default model; any provider/model OpenCode supports can be chosen in the app or set from the environment.
 ENV ROCKET_MODEL=meta/muse-spark-1.3 \
     ROCKET_CREDENTIALS_FILE=/stores/rocketeda/credentials \
     ROCKET_UI_HOST=0.0.0.0 \

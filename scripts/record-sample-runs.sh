@@ -22,9 +22,8 @@ if [[ -f .env ]]; then
 fi
 UPSTREAM="${ROCKET_META_UPSTREAM:-https://api.meta.ai}"
 OUT="${ROCKET_SAMPLE_RUNS_DIR:-$ROOT/docs/sample-runs}"
-# The key saved in the app, which wins over .env, as it does in the app.
-CREDENTIALS="${ROCKET_CREDENTIALS_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/rocketide/credentials}"
-if SAVED="$(sed -n 's/^MODEL_API_KEY=//p' "$CREDENTIALS" 2>/dev/null)" && [[ -n "$SAVED" ]]; then
+# The key saved in the app, which wins over .env, as it does in the app (JSON or the original file format).
+if SAVED="$(python3 -I rocket_fuel/scripts/model_config.py export-key --provider meta 2>/dev/null)" && [[ -n "$SAVED" ]]; then
   export MODEL_API_KEY="$SAVED"
 fi
 [[ -n "${MODEL_API_KEY:-}" ]] || { echo "Add your Meta API key in the app first, or set MODEL_API_KEY in .env." >&2; exit 1; }

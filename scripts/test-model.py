@@ -71,6 +71,16 @@ class Handler(BaseHTTPRequestHandler):
         request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         messages = request.get("messages", [])
         text = json.dumps(messages)
+        # The app's Settings tests a key with a real minimal non-streamed request.
+        if "Reply with exactly the word: pong" in text:
+            self.send_json({"model": request.get("model"),
+                            "choices": [{"message": {"role": "assistant", "content": "pong"}}],
+                            "usage": {"prompt_tokens": 8, "completion_tokens": 1}})
+            return
+        if not request.get("stream"):
+            self.send_json({"model": request.get("model"),
+                            "choices": [{"message": {"role": "assistant", "content": "TEST MODEL: non-streamed reply."}}]})
+            return
         project = re.search(r"Working directory: ([^\s\\\"]+)", text)
         done = sum(1 for message in messages if message.get("role") == "tool")
         model = request.get("model")

@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Runs on Muse Spark, Muse Wonder and SAM 3.1" src="https://img.shields.io/badge/Runs%20on-Muse%20Spark%20·%20Muse%20Wonder%20·%20SAM%203.1-ee6a4c?style=flat-square&logo=meta&logoColor=white">
+  <img alt="Any model through OpenCode; Meta Muse Spark is the default" src="https://img.shields.io/badge/Models-any%20OpenCode%20provider-ee6a4c?style=flat-square&logo=meta&logoColor=white">
   <img alt="Ubuntu 24.04" src="https://img.shields.io/badge/Ubuntu-24.04-34312e?style=flat-square&logo=ubuntu&logoColor=white">
   <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-34312e?style=flat-square&logo=python&logoColor=white">
   <img alt="Node 22" src="https://img.shields.io/badge/Node-22-34312e?style=flat-square&logo=nodedotjs&logoColor=white">
@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="#quick-start"><b>Quick start</b></a> ·
-  <a href="#muse-models"><b>Muse models</b></a> ·
+  <a href="#models"><b>Models</b></a> ·
   <a href="#how-it-works"><b>How it works</b></a> ·
   <a href="#demo-projects"><b>Demos</b></a> ·
   <a href="#honest-by-design"><b>Honest by design</b></a> ·
@@ -67,34 +67,38 @@ op-amp. Each starts out failing, you make the fix, and the simulator decides whe
   </tr>
 </table>
 
-## Muse models
+## Models
 
-Each Meta model does the job it's best at, and none of them decides whether a design passes. That's always the engine.
+RocketIDE uses the [OpenCode](https://opencode.ai) runtime for model calls, so it works with any provider that runtime
+supports, plus custom OpenAI-compatible endpoints. **Meta Muse Spark 1.3 is still the default**: an existing
+`ROCKET_MODEL=meta/muse-spark-1.3` setup keeps working, and the Meta-specific roles below keep their defaults.
 
-| Model | What it does here | Where to find it |
-|---|---|---|
-| **Muse Spark 1.3** | Runs the design agent: reads the project, edits the design, calls the engine's tools, reads the measurements and repairs what failed | The assistant panel |
-| **Muse Spark, seeing** | Turns a photo of a hand-drawn circuit into a netlist and a testbench the engine then simulates. Reads a spec or datasheet PDF and proposes its targets. Looks at the layout, plot or schematic you have open | **Attach** and **This view** |
-| **Muse Spark, teaching** | Learn mode: explains from your own circuit and measurements, and asks questions back. It can run checks but can't edit, so you make the changes | **Learn** |
-| **Muse Wonder 1.0** | An independent auditor of the work: do the checks test what they claim, how thin are the margins, what isn't covered? It can't edit, start runs or change a verdict | **Second opinion** |
-| **SAM 3.1** | Marks what you name on a chip layout, such as "power rails" | **Find in layout** |
+| Default role | Model | What it does here | Where to find it |
+|---|---|---|---|
+| Design agent | **Muse Spark 1.3** (`meta/muse-spark-1.3`) | Reads the project, edits the design, calls the engine's tools, reads the measurements and repairs what failed | The assistant panel |
+| Tutor / Learn mode | Inherits the design model | Explains from your own circuit and measurements, and asks questions back. It can run checks but can't edit | **Learn** |
+| Reviewer / Second opinion | **Muse Wonder 1.0** on the Meta default; otherwise inherits | An independent auditor: do the checks test what they claim, how thin are the margins, what isn't covered? It can't edit, start runs or change a verdict | **Second opinion** |
+| SAM 3.1 | Meta, optional | Marks what you name on a chip layout, such as "power rails" | **Find in layout** |
+
+Any role can use another provider and model. Choose the provider, model ID and key in **Settings → Model provider**;
+the launcher writes the pinned OpenCode 1.19.5 schema and injects the key server-side. Native providers (OpenAI,
+Anthropic, Gemini, DeepSeek, Groq, OpenRouter, Ollama, LM Studio, ...) use OpenCode's own integration; a custom
+endpoint uses its OpenAI-compatible adapter. A vendor with a proprietary protocol needs an adapter in OpenCode — a base
+URL alone is not enough. See [docs/providers.md](docs/providers.md) for setup, role overrides and limitations.
 
 Muse tools helped build RocketIDE too. Part of the engine was written with Muse Code, and the MobileLLM demo chip was
 designed with Muse Spark 1.3 through the engine's MCP tools.
 
-These are the only models RocketIDE calls. Rocket Fuel's config enables no provider except Meta's, and refuses to start
-with any other model.
-
-**Every call is visible.** `./run.sh` sends every model call through a small relay that prints each one in the terminal,
-with the model name taken from the API's own response:
+**Every call is visible.** Completed model turns are recorded by the Rocket Fuel plugin from OpenCode's event stream,
+with provider, model, status, tokens and timing, and printed in the terminal (for OpenAI-compatible endpoints an
+optional transparent relay can also be used):
 
 ```text
-[Meta Model API] 10:41:03  -> POST /v1/chat/completions  model=muse-spark-1.3  stream
-[Meta Model API] 10:41:05  <- 200  model=muse-spark-1.3  tokens in 4210 / out 312  2.14 s  id=req_...
+[Model API] openai/gpt-5.1  <- 200  tokens in 4210 / out 312  2.14 s
 ```
 
-The same facts go to `logs/meta-calls.jsonl`, and the app shows them too: the last call above the message box, and all of
-them under **Activity**. Keys and prompts are never printed or saved.
+The same facts go to `logs/model-calls.jsonl`, and the app shows them too: the last call above the message box, and all of
+them under **Activity**. Keys, prompts and message contents are never printed or saved.
 
 ## A look inside
 
@@ -150,8 +154,8 @@ foundry PDK.
 docker run --rm -p 127.0.0.1:5173:5173 ghcr.io/team-rocketeda/rocketide
 ```
 
-The image is about 4 GB to download. Then open http://localhost:5173, and paste your Meta Model API key into the assistant
-panel. The first start downloads the open-source sky130A PDK (about 140 MB), and the log prints every model call. To keep your projects and that download between runs, add
+The image is about 4 GB to download. Then open http://localhost:5173, and add a model API key in the assistant's
+**Settings → Model provider** (Meta by default; any OpenCode provider or custom OpenAI-compatible endpoint also works). The first start downloads the open-source sky130A PDK (about 140 MB), and the log prints every model call. To keep your projects and that download between runs, add
 `-v rocketide-store:/stores/rocketeda -v rocketide-projects:/opt/rocketide/projects`. The image is built for x86-64, and
 runs more slowly under emulation on Apple Silicon.
 
@@ -180,10 +184,11 @@ Then start the app:
 ./run.sh --fresh        # start clean: asks first, then deletes all projects and assistant chats
 ```
 
-**With a Meta Model API key,** open a project and paste your key into the assistant panel. The app checks it with Meta's
-API and restarts the assistant with it. You can replace or remove it under **Settings**. It's kept in a private file on
-your computer (`~/.config/rocketide/credentials`), outside every project, and never comes back to the browser. You can
-also set `MODEL_API_KEY` in `.env`, but a key saved in the app takes priority.
+**With a model API key,** open a project and add it under **Settings → Model provider**. The default is Meta's Muse
+Spark; pick another provider or a custom OpenAI-compatible endpoint there and the app checks the connection with a real
+minimal request, saves the choice and restarts the assistant. Keys are kept per provider in a private file on your
+computer (`~/.config/rocketide/credentials`), outside every project, and never come back to the browser. You can also
+set `MODEL_API_KEY` (or `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, ...) in `.env`, but a key saved in the app takes priority.
 
 **Without a key,** you can still see everything:
 
@@ -220,8 +225,8 @@ flowchart LR
   end
   UI["UI server<br/>UIUX/server"]
   A["Agent<br/>opencode + Rocket Fuel"]
-  R["Call log<br/>meta-relay.py"]
-  M["Meta Model API<br/>Muse Spark · Muse Wonder · SAM 3.1"]
+  R["Model activity<br/>plugin · optional relay"]
+  M["Model provider<br/>Meta default; any OpenCode provider"]
   E[("Rocket Engine<br/>one per project")]
   T["EDA tools<br/>ngspice · Icarus<br/>Magic · KLayout · LibreLane"]
   P[("projects/<br/>one git repo each")]
@@ -301,16 +306,21 @@ Set these in `.env`; anything already exported wins.
 
 | Variable | Default | What it does |
 |---|---|---|
-| `ROCKET_MODEL` | `meta/muse-spark-1.3` | The agent's model. Only `meta/...` models run |
-| `MODEL_API_KEY` | empty | Your Meta Model API key, if you don't add it in the app |
-| `ROCKET_CREDENTIALS_FILE` | `~/.config/rocketide/credentials` | Where a key added in the app is kept |
+| `ROCKET_MODEL` | `meta/muse-spark-1.3` | The agent's `provider/model`. Any provider the pinned OpenCode understands, or a custom endpoint |
+| `ROCKET_PROVIDER_TYPE` | inferred | `native` or `openai-compatible` (needed for a custom endpoint) |
+| `ROCKET_BASE_URL` | empty | Base URL for an OpenAI-compatible endpoint, e.g. `https://your-api.example.com/v1` |
+| `ROCKET_SMALL_MODEL`, `ROCKET_TUTOR_MODEL`, `ROCKET_REVIEWER_MODEL` | inherit `ROCKET_MODEL` | Optional per-role models; the Meta default reviewer stays Muse Wonder |
+| `MODEL_API_KEY` | empty | Key for Meta or a custom endpoint, if you don't add it in the app. Native providers may use their own variable (`OPENAI_API_KEY`, ...) |
+| `ROCKET_MODEL_CONFIG` | `~/.config/rocketide/model.json` | The one provider/model configuration saved by the app |
+| `ROCKET_CREDENTIALS_FILE` | `~/.config/rocketide/credentials` | Where keys added in the app are kept |
 | `PDK_SOURCE` | `~/.local/share/pdk/sky130A` | The PDK the engine registers at install, downloaded if it's missing |
 | `PDK_ID`, `PDK_REVISION` | `sky130A`, the engine's pin | Which PDK that is |
 | `ROCKET_PDK_ROOTS` | empty | PDK folders the agent may read but never edit, separated by `:` |
 | `ROCKET_PROJECTS_DIR` | `./projects` | Where projects live |
 | `ROCKET_UI_HOST`, `ROCKET_UI_PORT` | `127.0.0.1`, `5173` | The web app's address |
 | `ROCKET_ENGINE_PORT` | `8765` | The shared engine, loopback only |
-| `ROCKET_META_RELAY_PORT` | `8766` | The relay that logs every model call, loopback only |
+| `ROCKET_MODEL_RELAY_PORT` | `8766` | Optional transparent relay for OpenAI-compatible endpoints, loopback only (`ROCKET_META_RELAY_PORT` still works) |
+| `ROCKET_MODEL_CALL_LOG` | `logs/model-calls.jsonl` | Provider-neutral activity log (`ROCKET_META_CALL_LOG` still works) |
 
 ## What runs where
 
@@ -365,8 +375,8 @@ animations (SVG, WebM and animated PNG), plus the colours, type and rules for us
 ## Testing and releases
 
 `scripts/smoke.py` starts the assembled IDE and drives it the way a person would: it opens the demo, runs its checks,
-reads the plot data, and confirms the engine's APIs and the shared engine. `--agent` also sends a prompt to Muse Spark,
-which needs `MODEL_API_KEY`, and confirms it reached the engine. A check whose tool isn't installed reports SKIP, never a pass.
+reads the plot data, and confirms the engine's APIs and the shared engine. `--agent` also sends a prompt to the configured
+model, which needs that provider's key, and confirms it reached the engine. A check whose tool isn't installed reports SKIP, never a pass.
 
 `.github/workflows/build.yml` builds the Docker image and the desktop app on a clean machine. It also runs the demo's
 checks and the agent's guardrail scenarios, including what the tutor and the reviewer aren't allowed to do. Pushing a `v*` tag publishes a release with the archive from `./install.sh --package`, once those jobs pass.
